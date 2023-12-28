@@ -14,7 +14,7 @@ architecture a1 of metastability_filter is
 
 begin  -- architecture a1
 
-  entity work.delay
+  delay: entity work.delay
     generic map (
       DELAY => 2)
     port map (

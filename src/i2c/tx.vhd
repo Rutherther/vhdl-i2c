@@ -76,7 +76,7 @@ architecture a1 of tx is
 
   signal ready : std_logic;
 begin  -- architecture a1
-  entity utils.delay
+  scl_falling_delay: entity utils.delay
     generic map (
       DELAY => DELAY_SDA_FOR)
     port map (
@@ -113,7 +113,7 @@ begin  -- architecture a1
     if ready = '1' and valid_i = '1' then
       next_tx_buffers(curr_saving_buffer_index) <= write_data_i;
     end if;
-  end process set_next_tx_buffer;
+  end process set_next_tx_buffers;
 
   set_next_buffer_filled: process is
   begin  -- process set_next_buffer_filled
@@ -127,7 +127,7 @@ begin  -- architecture a1
     end if;
   end process set_next_buffer_filled;
 
-  set_next_state: process(curr_state, scl_delayed_pulse, scl_scl, tx_buffer_filled, valid_i) is
+  set_next_state: process(curr_state, scl_delayed_pulse, curr_scl, tx_buffer_filled, valid_i) is
     variable start_sending : std_logic := '0';
   begin  -- process set_next_state
     next_state <= curr_state;
@@ -137,7 +137,7 @@ begin  -- architecture a1
         next_state <= SENDING;
       end if;
     elsif curr_state = SENDING then
-      if curr_index = 7 and scl_delayed_pulse = '1' then
+      if curr_bit_index = 7 and scl_delayed_pulse = '1' then
         next_state <= IDLE;
       end if;
     elsif curr_state = WAITING_FOR_DATA then

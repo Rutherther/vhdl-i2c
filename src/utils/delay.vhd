@@ -14,7 +14,7 @@ entity delay is
 end entity delay;
 
 architecture a1 of delay is
-  signal DELAYED_PULSE_POS : natural := DELAY - 1;
+  constant DELAYED_PULSE_POS : natural := DELAY - 1;
   signal curr_pulses : std_logic_vector(DELAYED_PULSE_POS downto 0);
   signal next_pulses : std_logic_vector(DELAYED_PULSE_POS downto 0);
 begin  -- architecture a1
