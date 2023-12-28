@@ -44,9 +44,10 @@ begin  -- architecture a1
                   curr_read_rw;
 
   next_index <= (curr_index + 1) when curr_state = CHECKING and scl_pulse_i = '1' and curr_index < 7 else
+                curr_index when curr_state = CHECKING else
                 0;
 
-  mismatch <= '1' when address_i(6 - curr_index) /= sda_i and curr_index <= 6 and scl_pulse_i = '1' else '0';
+  mismatch <= '1' when curr_index <= 6 and address_i(6 - curr_index) /= sda_i and scl_pulse_i = '1' else '0';
 
   set_next_state: process (start_i, curr_state, mismatch, scl_pulse_i) is
   begin  -- process set_next_state
