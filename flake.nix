@@ -41,7 +41,7 @@
             ps.pytest
           ];
 
-          buildInputs = [
+          propagatedBuildInputs = [
             ps.colorama
           ];
         })
