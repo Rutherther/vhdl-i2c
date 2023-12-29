@@ -49,7 +49,7 @@ begin  -- architecture a1
 
   mismatch <= '1' when curr_index <= 6 and address_i(6 - curr_index) /= sda_i and scl_pulse_i = '1' else '0';
 
-  set_next_state: process (start_i, curr_state, mismatch, scl_pulse_i) is
+  set_next_state: process (all) is
   begin  -- process set_next_state
     next_state <= curr_state;
 

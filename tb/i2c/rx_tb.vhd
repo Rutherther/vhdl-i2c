@@ -77,6 +77,7 @@ begin  -- architecture a1
     port map (
       clk_i          => clk,
       rst_in         => rst_n,
+      ss_condition_i => '0',
       start_read_i   => start_read,
       scl_pulse_i    => scl_rising_pulse,
       sda_i          => sda,

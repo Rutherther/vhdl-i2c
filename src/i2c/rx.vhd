@@ -81,7 +81,7 @@ begin  -- architecture a1
   -- SAVING_STRETCHING -> SAVING_STRETCHING when data not read yet
   -- SAVING_STRETCHING -> RECEIVING when data read
 
-  set_next_state: process(curr_state, start_read_i, scl_pulse_i, confirm_read_i) is
+  set_next_state: process(all) is
   begin  -- process set_next_state
     next_state <= curr_state;
 
