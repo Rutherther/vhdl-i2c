@@ -50,7 +50,7 @@ architecture a1 of tx is
   signal curr_state : tx_state_t;
   signal next_state : tx_state_t;
 
-  type tx_buffers is array (0 to 1) of std_logic_vector(7 downto 0);
+  type tx_buffers is array (0 to 1) of std_logic_vector(8 downto 0);
   signal curr_tx_buffers : tx_buffers;
   signal next_tx_buffers : tx_buffers;
 
@@ -64,20 +64,14 @@ architecture a1 of tx is
   signal curr_tx_buffers_filled : std_logic_vector(1 downto 0);
   signal next_tx_buffers_filled : std_logic_vector(1 downto 0);
 
-  signal tx_buffer : std_logic_vector(7 downto 0);
+  signal tx_buffer : std_logic_vector(8 downto 0);
   signal tx_buffer_filled : std_logic;
-
-  signal curr_bit_index : integer range 0 to 7;
-  signal next_bit_index : integer range 0 to 7;
 
   signal scl_delayed_pulse : std_logic;
   signal curr_scl : std_logic;
   signal next_scl : std_logic;
 
   signal ready : std_logic;
-
-  signal curr_tx_buffer_0 : std_logic_vector(7 downto 0);
-  signal curr_tx_buffer_1 : std_logic_vector(7 downto 0);
 begin  -- architecture a1
   scl_falling_delay: entity utils.delay
     generic map (
@@ -88,12 +82,9 @@ begin  -- architecture a1
       signal_i => scl_falling_pulse_i,
       signal_o => scl_delayed_pulse);
 
-  curr_tx_buffer_0 <= curr_tx_buffers(0);
-  curr_tx_buffer_1 <= curr_tx_buffers(1);
-
   scl_stretch_o <= '1' when curr_state = WAITING_FOR_DATA else '0';
   ready_o <= ready;
-  sda_o <= tx_buffer(7 - curr_bit_index) when curr_state = SENDING else '1';
+  sda_o <= tx_buffer(8) when curr_state = SENDING else '1';
 
   ready <= '0' when curr_tx_buffers_filled(curr_saving_buffer_index) = '1' else '1';
   tx_buffer <= curr_tx_buffers(curr_tx_buffer_index);
@@ -103,11 +94,7 @@ begin  -- architecture a1
               '0' when scl_falling_pulse_i = '1' else
               curr_scl;
 
-  next_bit_index <= (curr_bit_index + 1) mod 8 when curr_state = SENDING and scl_delayed_pulse = '1' else
-                    curr_bit_index when curr_state = SENDING else
-                    0;
-
-  next_tx_buffer_index <= (curr_tx_buffer_index + 1) mod 2 when curr_bit_index = 7 and scl_delayed_pulse = '1' else
+  next_tx_buffer_index <= (curr_tx_buffer_index + 1) mod 2 when tx_buffer(7 downto 0) = "10000000" and scl_delayed_pulse = '1' else
                           curr_tx_buffer_index;
 
   next_saving_buffer_index <= (curr_saving_buffer_index + 1) mod 2 when ready = '1' and valid_i = '1' else
@@ -117,14 +104,18 @@ begin  -- architecture a1
   begin  -- process set_next_tx_buffer
     next_tx_buffers <= curr_tx_buffers;
     if ready = '1' and valid_i = '1' then
-      next_tx_buffers(curr_saving_buffer_index) <= write_data_i;
+      next_tx_buffers(curr_saving_buffer_index) <= write_data_i & '1';
+    end if;
+
+    if curr_state = SENDING and scl_delayed_pulse = '1' then
+      next_tx_buffers(curr_tx_buffer_index) <= tx_buffer(7 downto 0) & '0';
     end if;
   end process set_next_tx_buffers;
 
   set_next_buffer_filled: process(all) is
   begin  -- process set_next_buffer_filled
     next_tx_buffers_filled <= curr_tx_buffers_filled;
-    if curr_bit_index = 7 and scl_delayed_pulse = '1' then
+    if tx_buffer(7 downto 0) = "10000000" and scl_delayed_pulse = '1' then
       next_tx_buffers_filled(curr_tx_buffer_index) <= '0';
     end if;
 
@@ -150,7 +141,7 @@ begin  -- architecture a1
         next_state <= SENDING;
       end if;
     elsif curr_state = SENDING then
-      if curr_bit_index = 7 and scl_delayed_pulse = '1' then
+      if tx_buffer(7 downto 0) = "10000000" and scl_delayed_pulse = '1' then
         if start_write_i = '1' then
           override_tx_buffer_filled := curr_tx_buffers_filled(next_tx_buffer_index);
           start_sending := '1';
@@ -184,7 +175,6 @@ begin  -- architecture a1
         curr_tx_buffer_index <= 0;
         curr_tx_buffers_filled <= "00";
         curr_saving_buffer_index <= 0;
-        curr_bit_index <= 0;
         curr_scl <= '1';                -- assume 1 (the default, no one transmitting)
       else
         curr_state <= next_state;
@@ -192,7 +182,6 @@ begin  -- architecture a1
         curr_tx_buffer_index <= next_tx_buffer_index;
         curr_tx_buffers_filled <= next_tx_buffers_filled;
         curr_saving_buffer_index <= next_saving_buffer_index;
-        curr_bit_index <= next_bit_index;
         curr_scl <= next_scl;
       end if;
     end if;

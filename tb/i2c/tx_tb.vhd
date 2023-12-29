@@ -29,8 +29,6 @@ architecture a1 of tx_tb is
 
   signal validate_sda_stable_when_scl_high : std_logic := '0';
 
-  -- validate sda stable when scl = '1'
-
   procedure trigger_scl_pulse(
     signal scl : inout std_logic;
     signal scl_rising_pulse : inout std_logic;
@@ -85,7 +83,7 @@ architecture a1 of tx_tb is
       scl <= '0';
       scl_falling_pulse <= '1';
       scl_rising_pulse <= '0';
-        wait until falling_edge(clk);
+      wait until falling_edge(clk);
       scl_falling_pulse <= '0';
       scl_rising_pulse <= '0';
     end if;
