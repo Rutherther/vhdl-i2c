@@ -66,7 +66,7 @@ architecture a1 of rx is
   signal curr_read_data : std_logic_vector(7 downto 0);
   signal next_read_data : std_logic_vector(7 downto 0);
 begin  -- architecture a1
-  read_ready_o <= '1' when curr_state /= SAVING_STRETCHING else '0';
+  read_ready_o <= '1' when curr_state /= SAVING_STRETCHING and (curr_saving = '0' or curr_read_data_filled = '0') else '0';
   scl_stretch_o <= '1' when curr_state = SAVING_STRETCHING else '0';
   read_data_o <= curr_read_data;
 
@@ -93,7 +93,13 @@ begin  -- architecture a1
         next_state <= SAVING;
       end if;
     elsif curr_state = SAVING then
-      if confirm_read_i = '1' then
+      if curr_read_data_filled = '0' then
+        if start_read_i = '1' then
+          next_state <= RECEIVING;
+        else
+          next_state <= IDLE;
+        end if;
+      elsif confirm_read_i = '1' then
         if start_read_i = '1' then
           next_state <= RECEIVING; -- skip SAVING_STRETCHING
         else
@@ -115,17 +121,19 @@ begin  -- architecture a1
   read_valid_o <= curr_read_data_filled;
 
   -- TODO: (speedup by one cycle when saving?)
-  next_read_data <= curr_read_data when curr_read_data_filled = '1' else
-                    curr_rx_buffer when next_read_data_filled = '1' and curr_read_data_filled = '0' else
+  next_read_data <= curr_rx_buffer when next_read_data_filled = '1' and curr_read_data_filled = '0' else
+                    curr_rx_buffer when curr_read_data_filled = '1' and curr_saving = '1' and confirm_read_i = '1' else
+                    curr_read_data when curr_read_data_filled = '1' else
                     (others => '0');
 
   next_read_data_filled <= '1' when curr_read_data_filled = '1' and confirm_read_i = '0' else
-                           '0' when curr_read_data_filled = '1' and confirm_read_i = '1' else
+                           curr_saving when curr_read_data_filled = '1' and confirm_read_i = '1' else
                            '1' when curr_saving = '1' else
                            '0';
 
   next_rx_buffer <= curr_rx_buffer(6 downto 0) & sda_i when curr_receiving = '1' and scl_pulse_i = '1' else
                     curr_rx_buffer when curr_receiving = '1' else
+                    curr_rx_buffer when curr_saving = '1' and confirm_read_i = '0' else
                     "00000001";
 
   set_regs: process (clk_i) is
