@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 
 entity delay is
   generic (
-    DELAY : natural);
+    DELAY : natural range 0 to 31);
 
   port (
     clk_i   : in std_logic;
@@ -19,7 +19,12 @@ architecture a1 of delay is
   signal next_pulses : std_logic_vector(DELAYED_PULSE_POS downto 0);
 begin  -- architecture a1
 
-  signal_o <= curr_pulses(DELAYED_PULSE_POS);
+  zero_delay: if DELAY = 0 generate
+    signal_o <= signal_i;
+  else generate
+    signal_o <= curr_pulses(DELAYED_PULSE_POS);
+  end generate zero_delay;
+
   next_pulses <= curr_pulses(DELAYED_PULSE_POS - 1 downto 1) & signal_i;
 
   set_regs: process (clk_i) is
