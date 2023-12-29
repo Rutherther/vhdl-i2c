@@ -63,10 +63,6 @@ architecture a1 of rx is
   signal curr_rx_buffer : std_logic_vector(7 downto 0);
   signal next_rx_buffer : std_logic_vector(7 downto 0);
 
-  -- Bit index that is being received
-  signal curr_bit_index : integer range 0 to 7;
-  signal next_bit_index : integer range 0 to 7;
-
   signal curr_read_data : std_logic_vector(7 downto 0);
   signal next_read_data : std_logic_vector(7 downto 0);
 begin  -- architecture a1
@@ -84,7 +80,7 @@ begin  -- architecture a1
   -- SAVING_STRETCHING -> SAVING_STRETCHING when data not read yet
   -- SAVING_STRETCHING -> RECEIVING when data read
 
-  set_next_state: process(curr_state, start_read_i, curr_bit_index, scl_pulse_i, confirm_read_i) is
+  set_next_state: process(curr_state, start_read_i, scl_pulse_i, confirm_read_i) is
   begin  -- process set_next_state
     next_state <= curr_state;
 
@@ -93,7 +89,7 @@ begin  -- architecture a1
         next_state <= RECEIVING;
       end if;
     elsif curr_state = RECEIVING then
-      if curr_bit_index = 0 and scl_pulse_i = '1' then
+      if curr_rx_buffer(7) = '1' and scl_pulse_i = '1' then
         next_state <= SAVING;
       end if;
     elsif curr_state = SAVING then
@@ -120,7 +116,7 @@ begin  -- architecture a1
 
   -- TODO: (speedup by one cycle when saving?)
   next_read_data <= curr_read_data when curr_read_data_filled = '1' else
-                    next_rx_buffer when next_read_data_filled = '1' and curr_read_data_filled = '0' else
+                    curr_rx_buffer when next_read_data_filled = '1' and curr_read_data_filled = '0' else
                     (others => '0');
 
   next_read_data_filled <= '1' when curr_read_data_filled = '1' and confirm_read_i = '0' else
@@ -128,18 +124,9 @@ begin  -- architecture a1
                            '1' when curr_saving = '1' else
                            '0';
 
-  next_bit_index <= curr_bit_index when curr_receiving = '1' and scl_pulse_i = '0' else
-                (curr_bit_index - 1) mod 7 when curr_receiving = '1' and scl_pulse_i = '1' else
-                7; -- when curr_state /= RECEIVING and next_state = RECEIVING;
-
-  set_next_read_data: process (sda_i, curr_rx_buffer, curr_receiving, curr_saving, curr_bit_index, scl_pulse_i) is
-  begin  -- process set_next_read_data
-    next_rx_buffer <= curr_rx_buffer;
-
-    if curr_receiving = '1' and curr_saving = '0' and scl_pulse_i = '1' then
-      next_rx_buffer(curr_bit_index) <= sda_i;
-    end if;
-  end process set_next_read_data;
+  next_rx_buffer <= curr_rx_buffer(6 downto 0) & sda_i when curr_receiving = '1' and scl_pulse_i = '1' else
+                    curr_rx_buffer when curr_receiving = '1' else
+                    "00000001";
 
   set_regs: process (clk_i) is
   begin  -- process set_regs
@@ -147,13 +134,11 @@ begin  -- architecture a1
       if rst_in = '0' then              -- synchronous reset (active low)
         curr_read_data <= (others => '0');
         curr_rx_buffer <= (others => '0');
-        curr_bit_index <= 0;
         curr_read_data_filled <= '0';
         curr_state <= IDLE;
       else
         curr_read_data <= next_read_data;
         curr_rx_buffer <= next_rx_buffer;
-        curr_bit_index <= next_bit_index;
         curr_read_data_filled <= next_read_data_filled;
         curr_state <= next_state;
       end if;
