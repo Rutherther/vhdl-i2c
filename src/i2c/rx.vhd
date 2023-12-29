@@ -24,6 +24,7 @@ entity rx is
     clk_i          : in  std_logic;     -- Clock
     rst_in         : in  std_logic;     -- Reset (asynchronous)
     start_read_i   : in  std_logic;     -- Start reading with next scl_pulse
+    ss_condition_i : in std_logic;    -- Reset rx circuitry
 
     scl_pulse_i    : in  std_logic;     -- SCL rising edge pulse
     scl_stretch_o  : out std_logic;     -- Stretch SCL (keep SCL 0)
@@ -111,6 +112,14 @@ begin  -- architecture a1
     elsif curr_state = SAVING_STRETCHING then
       if confirm_read_i = '1' then
         next_state <= RECEIVING;
+      end if;
+    end if;
+
+    if ss_condition_i = '1' then
+      if curr_saving = '1' and curr_read_data_filled = '1' then
+        next_state <= SAVING;
+      else
+        next_state <= IDLE;
       end if;
     end if;
   end process set_next_state;
