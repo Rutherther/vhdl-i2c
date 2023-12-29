@@ -27,8 +27,8 @@ architecture a1 of address_detector is
   signal curr_state : state_t;
   signal next_state : state_t;
 
-  signal curr_index : natural range 0 to 7;
-  signal next_index : natural range 0 to 7;
+  signal curr_index : integer range 0 to 7;
+  signal next_index : integer range 0 to 7;
 
   signal curr_read_rw : std_logic;
   signal next_read_rw : std_logic;

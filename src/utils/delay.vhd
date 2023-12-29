@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 
 entity delay is
   generic (
-    DELAY : natural range 0 to 31);
+    DELAY : integer range 0 to 31);
 
   port (
     clk_i   : in std_logic;

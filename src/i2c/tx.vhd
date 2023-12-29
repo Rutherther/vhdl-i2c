@@ -55,11 +55,11 @@ architecture a1 of tx is
   signal next_tx_buffers : tx_buffers;
 
   -- Index to save next new data to.
-  signal curr_saving_buffer_index : natural range 0 to 1;
-  signal next_saving_buffer_index : natural range 0 to 1;
+  signal curr_saving_buffer_index : integer range 0 to 1;
+  signal next_saving_buffer_index : integer range 0 to 1;
 
-  signal curr_tx_buffer_index : natural range 0 to 1;
-  signal next_tx_buffer_index : natural range 0 to 1;
+  signal curr_tx_buffer_index : integer range 0 to 1;
+  signal next_tx_buffer_index : integer range 0 to 1;
 
   signal curr_tx_buffers_filled : std_logic_vector(1 downto 0);
   signal next_tx_buffers_filled : std_logic_vector(1 downto 0);
@@ -67,8 +67,8 @@ architecture a1 of tx is
   signal tx_buffer : std_logic_vector(7 downto 0);
   signal tx_buffer_filled : std_logic;
 
-  signal curr_bit_index : natural range 0 to 7;
-  signal next_bit_index : natural range 0 to 7;
+  signal curr_bit_index : integer range 0 to 7;
+  signal next_bit_index : integer range 0 to 7;
 
   signal scl_delayed_pulse : std_logic;
   signal curr_scl : std_logic;
