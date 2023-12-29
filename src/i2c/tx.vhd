@@ -27,11 +27,11 @@ entity tx is
     clk_i               : in  std_logic;
     rst_in              : in  std_logic;
     start_write_i       : in  std_logic;
+    ss_condition_i      : in std_logic;    -- Reset rx circuitry
 
     scl_rising_pulse_i  : in  std_logic;
     scl_falling_pulse_i : in  std_logic;
 
-    scl_i               : in  std_logic;
     scl_stretch_o       : out std_logic;
     sda_o               : out std_logic;
 
@@ -75,6 +75,9 @@ architecture a1 of tx is
   signal next_scl : std_logic;
 
   signal ready : std_logic;
+
+  signal curr_tx_buffer_0 : std_logic_vector(7 downto 0);
+  signal curr_tx_buffer_1 : std_logic_vector(7 downto 0);
 begin  -- architecture a1
   scl_falling_delay: entity utils.delay
     generic map (
@@ -85,9 +88,12 @@ begin  -- architecture a1
       signal_i => scl_falling_pulse_i,
       signal_o => scl_delayed_pulse);
 
+  curr_tx_buffer_0 <= curr_tx_buffers(0);
+  curr_tx_buffer_1 <= curr_tx_buffers(1);
+
   scl_stretch_o <= '1' when curr_state = WAITING_FOR_DATA else '0';
   ready_o <= ready;
-  sda_o <= tx_buffer(curr_bit_index) when curr_state = SENDING else '1';
+  sda_o <= tx_buffer(7 - curr_bit_index) when curr_state = SENDING else '1';
 
   ready <= '0' when curr_tx_buffers_filled(curr_saving_buffer_index) = '1' else '1';
   tx_buffer <= curr_tx_buffers(curr_tx_buffer_index);
@@ -97,17 +103,17 @@ begin  -- architecture a1
               '0' when scl_falling_pulse_i = '1' else
               curr_scl;
 
-  next_bit_index <= 0 when start_write_i = '1' else
-                    (curr_bit_index + 1) mod 7 when curr_state = SENDING and scl_delayed_pulse = '1' else
+  next_bit_index <= (curr_bit_index + 1) mod 8 when curr_state = SENDING and scl_delayed_pulse = '1' else
+                    curr_bit_index when curr_state = SENDING else
                     0;
 
-  next_tx_buffer_index <= (curr_tx_buffer_index + 1) mod 1 when curr_bit_index = 7 and scl_delayed_pulse = '1' else
+  next_tx_buffer_index <= (curr_tx_buffer_index + 1) mod 2 when curr_bit_index = 7 and scl_delayed_pulse = '1' else
                           curr_tx_buffer_index;
 
-  next_saving_buffer_index <= (curr_saving_buffer_index + 1) mod 1 when ready = '1' and valid_i = '1' else
+  next_saving_buffer_index <= (curr_saving_buffer_index + 1) mod 2 when ready = '1' and valid_i = '1' else
                               curr_saving_buffer_index;
 
-  set_next_tx_buffers: process is
+  set_next_tx_buffers: process(all) is
   begin  -- process set_next_tx_buffer
     next_tx_buffers <= curr_tx_buffers;
     if ready = '1' and valid_i = '1' then
@@ -115,7 +121,7 @@ begin  -- architecture a1
     end if;
   end process set_next_tx_buffers;
 
-  set_next_buffer_filled: process is
+  set_next_buffer_filled: process(all) is
   begin  -- process set_next_buffer_filled
     next_tx_buffers_filled <= curr_tx_buffers_filled;
     if curr_bit_index = 7 and scl_delayed_pulse = '1' then
@@ -127,18 +133,30 @@ begin  -- architecture a1
     end if;
   end process set_next_buffer_filled;
 
-  set_next_state: process(curr_state, scl_delayed_pulse, curr_scl, tx_buffer_filled, valid_i) is
+  set_next_state: process(all) is
     variable start_sending : std_logic := '0';
+    variable override_tx_buffer_filled : std_logic;
   begin  -- process set_next_state
+    start_sending := '0';
     next_state <= curr_state;
+    override_tx_buffer_filled := tx_buffer_filled;
 
-    if curr_state = WAITING_FOR_FALLING_EDGE then
+    if curr_state = IDLE then
+      if start_write_i = '1' then
+        start_sending := '1';
+      end if;
+    elsif curr_state = WAITING_FOR_FALLING_EDGE then
       if scl_delayed_pulse = '1' then
         next_state <= SENDING;
       end if;
     elsif curr_state = SENDING then
       if curr_bit_index = 7 and scl_delayed_pulse = '1' then
-        next_state <= IDLE;
+        if start_write_i = '1' then
+          override_tx_buffer_filled := curr_tx_buffers_filled(next_tx_buffer_index);
+          start_sending := '1';
+        else
+          next_state <= IDLE;
+        end if;
       end if;
     elsif curr_state = WAITING_FOR_DATA then
       if valid_i = '1' then
@@ -146,16 +164,10 @@ begin  -- architecture a1
       end if;
     end if;
 
-    if start_write_i = '1' then
-      if tx_buffer_filled = '1' then
-        start_sending := '1';
-      else
-        next_state <= WAITING_FOR_DATA;
-      end if;
-    end if;
-
     if start_sending = '1' then
-      if curr_scl = '0' then
+      if override_tx_buffer_filled = '0' and valid_i = '0' then
+        next_state <= WAITING_FOR_DATA;
+      elsif curr_scl = '0' then
         next_state <= SENDING;
       else
         next_state <= WAITING_FOR_FALLING_EDGE;
@@ -166,11 +178,12 @@ begin  -- architecture a1
   set_regs: process (clk_i) is
   begin  -- process set_next
     if rising_edge(clk_i) then          -- rising clock edge
-      if rst_in = '0' then              -- synchronous reset (active low)
+      if rst_in = '0' or ss_condition_i = '1' then  -- synchronous reset (active low)
         curr_state <= IDLE;
         curr_tx_buffers <= (others => (others => '0'));
         curr_tx_buffer_index <= 0;
         curr_tx_buffers_filled <= "00";
+        curr_saving_buffer_index <= 0;
         curr_bit_index <= 0;
         curr_scl <= '1';                -- assume 1 (the default, no one transmitting)
       else
@@ -178,6 +191,7 @@ begin  -- architecture a1
         curr_tx_buffers <= next_tx_buffers;
         curr_tx_buffer_index <= next_tx_buffer_index;
         curr_tx_buffers_filled <= next_tx_buffers_filled;
+        curr_saving_buffer_index <= next_saving_buffer_index;
         curr_bit_index <= next_bit_index;
         curr_scl <= next_scl;
       end if;
