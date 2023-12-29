@@ -13,28 +13,32 @@ entity startstop_condition_detector is
 end entity startstop_condition_detector;
 
 architecture a1 of startstop_condition_detector is
-  signal reg_start, reg_stop : std_logic;
-  signal next_start, next_stop : std_logic;
+  -- signal curr_start, curr_stop : std_logic;
+  -- signal next_start, next_stop : std_logic;
 
-  signal reg_prev_sda : std_logic;
-  signal next_prev_sda : std_logic;
+  signal curr_prev_sda, curr_prev_scl : std_logic;
+  signal next_prev_sda, next_prev_scl : std_logic;
 begin  -- architecture a1
+  -- start_o <= curr_start;
+  -- stop_o <= curr_stop;
 
   next_prev_sda <= sda_i;
+  next_prev_scl <= scl_i;
 
-  next_start <= '0' when reg_start = '1' else
-                '1' when reg_prev_sda = '0' and sda_i = '1' and scl_i = '1' else
-                '0';
-  next_stop <= '0' when reg_stop = '1' else
-               '1' when reg_prev_sda = '1' and sda_i = '0' and scl_i = '1' else
-               '0';
+  start_o <= -- '0' when curr_start = '1' else
+             '1' when curr_prev_sda = '1' and sda_i = '0' and curr_prev_scl = '1' and scl_i = '1' else
+             '0';
+  stop_o <= -- '0' when curr_stop = '1' else
+            '1' when curr_prev_sda = '0' and sda_i = '1' and curr_prev_scl = '1' and scl_i = '1' else
+            '0';
 
   set_next: process (clk_i) is
   begin  -- process set_next
     if rising_edge(clk_i) then          -- rising clock edge
-      reg_prev_sda <= next_prev_sda;
-      reg_start <= next_start;
-      reg_stop <= next_stop;
+      curr_prev_sda <= next_prev_sda;
+      curr_prev_scl <= next_prev_scl;
+      -- curr_start <= next_start;
+      -- curr_stop <= next_stop;
     end if;
   end process set_next;
 
