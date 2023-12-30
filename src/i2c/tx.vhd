@@ -25,6 +25,7 @@ entity tx is
     rst_in              : in  std_logic;
     start_write_i       : in  std_logic;
     ss_condition_i      : in std_logic;    -- Reset rx circuitry
+    clear_buffer_i      : in std_logic;
 
     expect_ack_i        : in std_logic;
     err_noack_o         : out std_logic;
@@ -178,12 +179,16 @@ begin  -- architecture a1
   set_regs: process (clk_i) is
   begin  -- process set_next
     if rising_edge(clk_i) then          -- rising clock edge
-      if rst_in = '0' or ss_condition_i = '1' then  -- synchronous reset (active low)
+      if rst_in = '0' or clear_buffer_i = '1' then  -- synchronous reset (active low)
         curr_state <= IDLE;
         curr_tx_buffers <= (others => (others => '0'));
         curr_tx_buffer_index <= 0;
         curr_tx_buffers_filled <= "00";
         curr_saving_buffer_index <= 0;
+        curr_scl <= '1';                -- assume 1 (the default, no one transmitting)
+        curr_err_noack <= '0';
+      elsif ss_condition_i = '1' then
+        curr_state <= IDLE;
         curr_scl <= '1';                -- assume 1 (the default, no one transmitting)
         curr_err_noack <= '0';
       else

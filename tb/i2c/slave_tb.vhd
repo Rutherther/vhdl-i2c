@@ -274,6 +274,7 @@ begin  -- architecture tb
       tx_valid_i     => tx_valid,
       tx_data_i      => tx_data,
       tx_stretch_i   => '0',
+      tx_clear_buffer_i => '0',
 
       err_noack_o    => err_noack,
       rw_o           => rw,

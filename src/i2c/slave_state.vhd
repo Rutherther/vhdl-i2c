@@ -30,7 +30,7 @@ architecture a1 of i2c_slave_state is
     TRANSMITTING,       -- we are transmitting data
     BUS_BUSY);          -- bus is taken, different slave communicating
 
-  signal curr_state : slave_state;
+  signal curr_state : slave_state := BUS_FREE;
   signal next_state : slave_state;
 
   signal communicating_with_master : std_logic;

@@ -23,11 +23,12 @@ entity slave is
     rx_stretch_i : in std_logic;
 
     -- tx
-    tx_ready_o   : out std_logic;       -- Transmitter ready for new data
-    tx_valid_i   : in std_logic;        -- Are data in tx_data valid? Should be
+    tx_ready_o        : out std_logic;  -- Transmitter ready for new data
+    tx_valid_i        : in  std_logic;  -- Are data in tx_data valid? Should be
                                         -- a pulse for one cycle only
-    tx_data_i    : in std_logic_vector(7 downto 0);  -- Data to transmit
-    tx_stretch_i : in std_logic;
+    tx_data_i         : in  std_logic_vector(7 downto 0);  -- Data to transmit
+    tx_stretch_i      : in  std_logic;
+    tx_clear_buffer_i : in  std_logic;
 
     -- errors
     err_noack_o  : out std_logic;
@@ -141,10 +142,11 @@ begin  -- architecture a1
       confirm_read_i        => rx_confirm_i);
 
   -- tx
-  tx: entity work.tx
+  tx : entity work.tx
     port map (
       clk_i                 => clk_i,
       rst_in                => rst_in,
+      clear_buffer_i        => tx_clear_buffer_i,
       start_write_i         => transmitting,
       expect_ack_i          => expect_ack_i,
       err_noack_o           => err_noack_o,
