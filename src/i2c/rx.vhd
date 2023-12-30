@@ -24,11 +24,15 @@ entity rx is
     clk_i          : in  std_logic;     -- Clock
     rst_in         : in  std_logic;     -- Reset (asynchronous)
     start_read_i   : in  std_logic;     -- Start reading with next scl_pulse
-    ss_condition_i : in std_logic;    -- Reset rx circuitry
+    ss_condition_i : in  std_logic;     -- Reset rx circuitry
 
     scl_pulse_i    : in  std_logic;     -- SCL rising edge pulse
+    scl_falling_delayed_i    : in  std_logic;     -- SCL rising edge pulse
     scl_stretch_o  : out std_logic;     -- Stretch SCL (keep SCL 0)
     sda_i          : in  std_logic;     -- SDA data line state
+    sda_enable_o   : out std_logic;     -- SDA data line state
+
+    generate_ack_i : in std_logic;
 
     read_valid_o   : out std_logic;     -- Are there any data on read_data_o?
     read_ready_o   : out std_logic;     -- Is it possible to read anymore, or
@@ -41,19 +45,23 @@ end entity rx;
 architecture a1 of rx is
   -- IDLE - not doing anythign
   -- RECEIVING - currently receiving data to the buffer
-  -- SAVING - trying to save to the read data output, waiting for data being
+  -- ACK - going to generate acknowledge
+  -- ACK_ON - sda should be enabled, to signal ack
+  -- STRETCHING -
   -- read if cannot save
-  -- SAVING_STRETCHING - waiting for data being read, should
   -- be sending already, but cannot, since the data are not read,
   -- so stretching SCL
-  type rx_state_t is (IDLE, RECEIVING, SAVING, SAVING_STRETCHING);
+  type rx_state_t is (IDLE, RECEIVING, ACK, ACK_ON, STRETCHING);
   signal curr_state : rx_state_t;
   signal next_state : rx_state_t;
 
   -- Whether state = RECEIVING
   signal curr_receiving : std_logic;
-  -- Whether state = SAVING or SAVING_STRETCHING
+
+  -- Whether data are being saved (could be just one cycle if not filled, or
+  -- more if filled)
   signal curr_saving : std_logic;
+  signal next_saving : std_logic;
 
   -- Whether the read data output is filled
   -- already (it's a register)
@@ -67,65 +75,66 @@ architecture a1 of rx is
   signal curr_read_data : std_logic_vector(7 downto 0);
   signal next_read_data : std_logic_vector(7 downto 0);
 begin  -- architecture a1
-  read_ready_o <= '1' when curr_state /= SAVING_STRETCHING and (curr_saving = '0' or curr_read_data_filled = '0') else '0';
-  scl_stretch_o <= '1' when curr_state = SAVING_STRETCHING else '0';
+  read_ready_o <= '1' when curr_saving = '0' or curr_read_data_filled = '0' or confirm_read_i = '1' else
+                  '0';
+
+  scl_stretch_o <= '1' when curr_state = STRETCHING else '0';
+
   read_data_o <= curr_read_data;
 
-  -- IDLE -> RECEIVING on start_read,
-  -- RECEIVING -> RECEIVING when not received full data
-  -- RECEIVING -> SAVING when received all data
-  -- SAVING -> SAVING_STRETCHING when cannot overrode data AND start_read
-  -- SAVING -> RECEIVING when start_read AND overriding data now
-  -- SAVING -> SAVING when cannot override data (data not read yet)
-  -- SAVING -> IDLE when can override data
-  -- SAVING_STRETCHING -> SAVING_STRETCHING when data not read yet
-  -- SAVING_STRETCHING -> RECEIVING when data read
+  sda_enable_o <= '1' when curr_state = ACK_ON and generate_ack_i = '1' else
+                  '0';
 
   set_next_state: process(all) is
+    variable start_receive : std_logic;
   begin  -- process set_next_state
     next_state <= curr_state;
+    start_receive := '0';
 
     if curr_state = IDLE then
       if start_read_i = '1' then
-        next_state <= RECEIVING;
+        start_receive := '1';
       end if;
     elsif curr_state = RECEIVING then
       if curr_rx_buffer(7) = '1' and scl_pulse_i = '1' then
-        next_state <= SAVING;
+        next_state <= ACK;
       end if;
-    elsif curr_state = SAVING then
-      if curr_read_data_filled = '0' then
+    elsif curr_state = ACK then
+      if scl_falling_delayed_i = '1' then
+        next_state <= ACK_ON;
+      end if;
+    elsif curr_state = ACK_ON then
+      if scl_falling_delayed_i = '1' then
         if start_read_i = '1' then
-          next_state <= RECEIVING;
+          start_receive := '1';
         else
           next_state <= IDLE;
         end if;
-      elsif confirm_read_i = '1' then
-        if start_read_i = '1' then
-          next_state <= RECEIVING; -- skip SAVING_STRETCHING
-        else
-          next_state <= IDLE;
-        end if;
-      elsif start_read_i = '1' then
-        next_state <= SAVING_STRETCHING;
       end if;
-    elsif curr_state = SAVING_STRETCHING then
+    elsif curr_state = STRETCHING then
       if confirm_read_i = '1' then
         next_state <= RECEIVING;
       end if;
     end if;
 
-    if ss_condition_i = '1' then
-      if curr_saving = '1' and curr_read_data_filled = '1' then
-        next_state <= SAVING;
+    if start_receive = '1' then
+      if curr_read_data_filled = '0' or confirm_read_i = '1' or curr_saving = '0' then
+        next_state <= RECEIVING;
       else
-        next_state <= IDLE;
+        next_state <= STRETCHING;
       end if;
+    end if;
+
+    if ss_condition_i = '1' then
+      next_state <= IDLE;
     end if;
   end process set_next_state;
 
   curr_receiving <= '1' when curr_state = RECEIVING else '0';
-  curr_saving <= '1' when curr_state = SAVING or curr_state = SAVING_STRETCHING else '0';
+
+  next_saving <= '1' when curr_rx_buffer(7) = '1' and scl_pulse_i = '1' and curr_state = RECEIVING else
+                 '1' when curr_saving = '1' and curr_read_data_filled = '1' and confirm_read_i = '0' else
+                 '0';
 
   read_valid_o <= curr_read_data_filled;
 
@@ -153,11 +162,13 @@ begin  -- architecture a1
         curr_rx_buffer <= (others => '0');
         curr_read_data_filled <= '0';
         curr_state <= IDLE;
+        curr_saving <= '0';
       else
         curr_read_data <= next_read_data;
         curr_rx_buffer <= next_rx_buffer;
         curr_read_data_filled <= next_read_data_filled;
         curr_state <= next_state;
+        curr_saving <= next_saving;
       end if;
     end if;
   end process set_regs;

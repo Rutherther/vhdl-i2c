@@ -20,20 +20,21 @@ use ieee.std_logic_1164.all;
 library utils;
 
 entity tx is
-  generic (
-    DELAY_SDA_FOR : natural := 5);      -- How many cycles to delay setting SDA
-                                        -- after falling edge of scl
   port (
     clk_i               : in  std_logic;
     rst_in              : in  std_logic;
     start_write_i       : in  std_logic;
     ss_condition_i      : in std_logic;    -- Reset rx circuitry
 
+    expect_ack_i        : in std_logic;
+    err_noack_o         : out std_logic;
+
     scl_rising_pulse_i  : in  std_logic;
-    scl_falling_pulse_i : in  std_logic;
+    scl_falling_delayed_i : in  std_logic;
 
     scl_stretch_o       : out std_logic;
-    sda_o               : out std_logic;
+    sda_i               : in  std_logic;
+    sda_enable_o        : out std_logic;
 
     ready_o             : out std_logic;
     valid_i             : in  std_logic;
@@ -46,7 +47,7 @@ architecture a1 of tx is
   -- SENDING - data are in the buffer, being sent
   -- WAITING_FOR_SEND there were data written to the buffer, but cannot send now
   -- WAITING_FOR_DATA should be sending, but there are no data - stretching
-  type tx_state_t is (IDLE, WAITING_FOR_FALLING_EDGE, SENDING, WAITING_FOR_DATA);
+  type tx_state_t is (IDLE, WAITING_FOR_FALLING_EDGE, SENDING, ACK, WAITING_FOR_DATA);
   signal curr_state : tx_state_t;
   signal next_state : tx_state_t;
 
@@ -67,38 +68,37 @@ architecture a1 of tx is
   signal tx_buffer : std_logic_vector(8 downto 0);
   signal tx_buffer_filled : std_logic;
 
-  signal scl_delayed_pulse : std_logic;
   signal curr_scl : std_logic;
   signal next_scl : std_logic;
 
+  signal curr_err_noack : std_logic;
+  signal next_err_noack : std_logic;
+
   signal ready : std_logic;
 begin  -- architecture a1
-  scl_falling_delay: entity utils.delay
-    generic map (
-      DELAY => DELAY_SDA_FOR)
-    port map (
-      clk_i   => clk_i,
-      rst_in  => rst_in,
-      signal_i => scl_falling_pulse_i,
-      signal_o => scl_delayed_pulse);
-
   scl_stretch_o <= '1' when curr_state = WAITING_FOR_DATA else '0';
-  ready_o <= ready;
-  sda_o <= tx_buffer(8) when curr_state = SENDING else '1';
+  ready_o <= ready and not curr_err_noack;
+  sda_enable_o <= not tx_buffer(8) when curr_state = SENDING else '0';
+  err_noack_o <= curr_err_noack;
 
-  ready <= '0' when curr_tx_buffers_filled(curr_saving_buffer_index) = '1' else '1';
+  ready <= '0' when curr_tx_buffers_filled(curr_saving_buffer_index) = '1' or curr_err_noack = '1' else '1';
   tx_buffer <= curr_tx_buffers(curr_tx_buffer_index);
   tx_buffer_filled <= curr_tx_buffers_filled(curr_tx_buffer_index);
 
   next_scl <= '1' when scl_rising_pulse_i = '1' else
-              '0' when scl_falling_pulse_i = '1' else
+              '0' when scl_falling_delayed_i = '1' else
               curr_scl;
 
-  next_tx_buffer_index <= (curr_tx_buffer_index + 1) mod 2 when tx_buffer(7 downto 0) = "10000000" and scl_delayed_pulse = '1' else
+  next_tx_buffer_index <= (curr_tx_buffer_index + 1) mod 2 when tx_buffer(7 downto 0) = "10000000" and scl_falling_delayed_i = '1' else
                           curr_tx_buffer_index;
 
   next_saving_buffer_index <= (curr_saving_buffer_index + 1) mod 2 when ready = '1' and valid_i = '1' else
                               curr_saving_buffer_index;
+
+  next_err_noack <= '0' when expect_ack_i = '0' else
+                    '1' when curr_err_noack = '1' else
+                    '1' when curr_state = ACK and scl_rising_pulse_i = '1' and sda_i = '1' else
+                    '0';
 
   set_next_tx_buffers: process(all) is
   begin  -- process set_next_tx_buffer
@@ -107,7 +107,7 @@ begin  -- architecture a1
       next_tx_buffers(curr_saving_buffer_index) <= write_data_i & '1';
     end if;
 
-    if curr_state = SENDING and scl_delayed_pulse = '1' then
+    if curr_state = SENDING and scl_falling_delayed_i = '1' then
       next_tx_buffers(curr_tx_buffer_index) <= tx_buffer(7 downto 0) & '0';
     end if;
   end process set_next_tx_buffers;
@@ -115,7 +115,7 @@ begin  -- architecture a1
   set_next_buffer_filled: process(all) is
   begin  -- process set_next_buffer_filled
     next_tx_buffers_filled <= curr_tx_buffers_filled;
-    if tx_buffer(7 downto 0) = "10000000" and scl_delayed_pulse = '1' then
+    if tx_buffer(7 downto 0) = "10000000" and scl_falling_delayed_i = '1' then
       next_tx_buffers_filled(curr_tx_buffer_index) <= '0';
     end if;
 
@@ -137,11 +137,15 @@ begin  -- architecture a1
         start_sending := '1';
       end if;
     elsif curr_state = WAITING_FOR_FALLING_EDGE then
-      if scl_delayed_pulse = '1' then
+      if scl_falling_delayed_i = '1' then
         next_state <= SENDING;
       end if;
     elsif curr_state = SENDING then
-      if tx_buffer(7 downto 0) = "10000000" and scl_delayed_pulse = '1' then
+      if tx_buffer(7 downto 0) = "10000000" and scl_falling_delayed_i = '1' then
+        next_state <= ACK;
+      end if;
+    elsif curr_state = ACK then
+      if scl_rising_pulse_i = '1' then
         if start_write_i = '1' then
           override_tx_buffer_filled := curr_tx_buffers_filled(next_tx_buffer_index);
           start_sending := '1';
@@ -158,11 +162,16 @@ begin  -- architecture a1
     if start_sending = '1' then
       if override_tx_buffer_filled = '0' and valid_i = '0' then
         next_state <= WAITING_FOR_DATA;
-      elsif curr_scl = '0' then
+      elsif curr_scl = '0' and scl_rising_pulse_i = '0' then
         next_state <= SENDING;
       else
         next_state <= WAITING_FOR_FALLING_EDGE;
       end if;
+    end if;
+
+    if curr_err_noack = '1' then
+      next_state <= IDLE;               -- not doing anything after an error.
+                                        -- Waiting for ss condition or reset
     end if;
   end process set_next_state;
 
@@ -176,6 +185,7 @@ begin  -- architecture a1
         curr_tx_buffers_filled <= "00";
         curr_saving_buffer_index <= 0;
         curr_scl <= '1';                -- assume 1 (the default, no one transmitting)
+        curr_err_noack <= '0';
       else
         curr_state <= next_state;
         curr_tx_buffers <= next_tx_buffers;
@@ -183,6 +193,7 @@ begin  -- architecture a1
         curr_tx_buffers_filled <= next_tx_buffers_filled;
         curr_saving_buffer_index <= next_saving_buffer_index;
         curr_scl <= next_scl;
+        curr_err_noack <= next_err_noack;
       end if;
     end if;
   end process set_regs;
