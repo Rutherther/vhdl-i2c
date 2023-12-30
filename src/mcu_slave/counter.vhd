@@ -8,6 +8,7 @@ library i2c;
 entity counter is
 
   generic (
+    DELAY : integer := 15;
     MAX : integer := 100);
 
   port (
@@ -50,7 +51,7 @@ begin
 
   i2c_slave: entity i2c.slave
     generic map (
-      SCL_FALLING_DELAY => 15)
+      SCL_FALLING_DELAY => DELAY)
     port map (
       clk_i          => clk_i,
       rst_in         => rst_n,

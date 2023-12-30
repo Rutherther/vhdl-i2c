@@ -28,11 +28,16 @@ architecture tb of counter_tb is
   signal rst : std_logic;
 
   signal scl_override, sda_override : std_logic := '0';
+  signal not_scl : std_logic;
 
   signal err_noack          : std_logic;
   signal bus_busy, dev_busy : std_logic;
+
+  signal one : std_logic := '1';
 begin  -- architecture tb
   uut : entity mcu_slave.counter
+    generic map (
+      DELAY => 1)
     port map (
       clk_i       => clk,
       rst_i       => rst,
@@ -46,10 +51,14 @@ begin  -- architecture tb
 
   sda <= not sda_override;
   scl <= not scl_override;
+  not_scl <= not scl;
 
   clk <= not clk after CLK_PERIOD / 2;
   rst_n <= '1' after 2 * CLK_PERIOD;
   rst <= not rst_n;
+
+  -- TODO: allow conditions from master...
+  -- sda_stability_check: check_stable(clk, one, scl, not_scl, sda);
 
   main: process is
   begin  -- process main
