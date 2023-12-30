@@ -7,8 +7,14 @@ vu = VUnit.from_argv(compile_builtins = False)
 
 vu.add_vhdl_builtins()
 
-testbench_lib = vu.add_library('i2c_tb')
-testbench_lib.add_source_files(Path(__file__).parent / 'tb/**/*.vhd')
+i2c_tb_lib = vu.add_library('i2c_tb')
+i2c_tb_lib.add_source_files(Path(__file__).parent / 'tb/i2c/**/*.vhd')
+
+mcu_slave_tb_lib = vu.add_library('mcu_slave_tb')
+mcu_slave_tb_lib.add_source_files(Path(__file__).parent / 'tb/mcu_slave/**/*.vhd')
+
+utils_lib = vu.add_library('mcu_slave')
+utils_lib.add_source_files(Path(__file__).parent / 'src/mcu_slave/**/*.vhd')
 
 utils_lib = vu.add_library('utils')
 utils_lib.add_source_files(Path(__file__).parent / 'src/utils/**/*.vhd')
