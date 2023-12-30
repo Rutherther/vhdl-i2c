@@ -6,14 +6,14 @@ library i2c;
 library vunit_lib;
 context vunit_lib.vunit_context;
 
-entity startstop_condition_detector is
+entity startstop_condition_detector_tb is
 
   generic (
     runner_cfg : string);
 
-end entity startstop_condition_detector;
+end entity startstop_condition_detector_tb;
 
-architecture tb of startstop_condition_detector is
+architecture tb of startstop_condition_detector_tb is
   signal clk : std_logic := '0';
   constant CLK_PERIOD : time := 10 ns;
 
