@@ -75,9 +75,9 @@ package body tb_i2c_master_pkg is
     sda_override <= '0';
     scl_rise(scl_override);
     if exp_ack = '1' then
-      check_equal(sda, '0');
+      check_equal(sda, '0', "No acknowledge");
     elsif exp_ack = '0' then
-      check_equal(sda, '1');
+      check_equal(sda, '1', "There was acknowledge even though there shouldn't have been");
     end if;
 
     if stop_condition = '1' then
@@ -108,7 +108,7 @@ package body tb_i2c_master_pkg is
     -- data
     for i in 7 downto 0 loop
       scl_rise(scl_override);
-      check_equal(sda, exp_data(i));
+      check_equal(sda, exp_data(i), "Received data (sda) not as expected");
       scl_fall(scl_override);
     end loop;  -- i
 
