@@ -7,12 +7,10 @@ library i2c;
 
 entity regs is
 
-  generic (
-    MAX : integer := 100);
-
   port (
     clk_i  : in std_logic;
     rst_i : in std_logic;
+    rst_on : out std_logic;
     err_noack_o : out std_logic;
     bus_busy_o : out std_logic;
     dev_busy_o : out std_logic;
@@ -54,6 +52,7 @@ architecture a1 of regs is
   signal rw : std_logic;
 begin
   rst_n <= not rst_i;
+  rst_on <= not rst_i;
   dev_busy_o <= dev_busy;
 
   next_dev_busy <= dev_busy;
@@ -85,7 +84,7 @@ begin
 
   i2c_slave: entity i2c.slave
     generic map (
-      SCL_FALLING_DELAY => 1)
+      SCL_FALLING_DELAY => 15)
     port map (
       clk_i          => clk_i,
       rst_in         => rst_n,
@@ -128,7 +127,15 @@ begin
   begin  -- process set_regs
     if rising_edge(clk_i) then          -- rising clock edge
       if rst_n = '0' then              -- synchronous reset (active low)
+        curr_reg_address_filled <= '0';
+        curr_dev_busy <= '0';
+        curr_reg_address <= "00000000";
+        curr_regs <= (others => (others => '0'));
       else
+        curr_reg_address_filled <= next_reg_address_filled;
+        curr_dev_busy <= next_dev_busy;
+        curr_reg_address <= next_reg_address;
+        curr_regs <= next_regs;
       end if;
     end if;
   end process set_regs;

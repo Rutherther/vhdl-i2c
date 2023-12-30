@@ -13,6 +13,7 @@ entity counter is
   port (
     clk_i  : in std_logic;
     rst_i : in std_logic;
+    rst_on : out std_logic;
     err_noack_o : out std_logic;
     bus_busy_o : out std_logic;
     dev_busy_o : out std_logic;
@@ -37,6 +38,7 @@ architecture a1 of counter is
   signal tx_data : std_logic_vector(7 downto 0);
 begin
   rst_n <= not rst_i;
+  rst_on <= rst_n;
 
   next_count <= (curr_count + 1) mod MAX when go_next = '1' else
                 curr_count;
@@ -48,7 +50,7 @@ begin
 
   i2c_slave: entity i2c.slave
     generic map (
-      SCL_FALLING_DELAY => 1)
+      SCL_FALLING_DELAY => 15)
     port map (
       clk_i          => clk_i,
       rst_in         => rst_n,

@@ -1,0 +1,26 @@
+[package]
+name = "slave-regs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cortex-m = "0.7.7"
+cortex-m-rt = "0.7.3"
+cortex-m-semihosting = "0.5.0"
+embedded-hal = "0.2.7"
+panic-halt = "0.2.0"
+tm4c-hal = "0.4.2"
+tm4c123x-hal = { version = "0.10.3", features = ["rt"] }
+
+[[bin]]
+name = "slave-regs"
+test = false
+bench = false
+
+[profile.release]
+panic = "abort"
+strip = true
+codegen-units = 1
+debug = false
+lto = true
+opt-level = "s"
