@@ -25,7 +25,7 @@ begin  -- architecture a1
     signal_o <= curr_pulses(DELAYED_PULSE_POS);
   end generate zero_delay;
 
-  next_pulses <= curr_pulses(DELAYED_PULSE_POS - 1 downto 1) & signal_i;
+  next_pulses <= curr_pulses(DELAYED_PULSE_POS - 1 downto 0) & signal_i;
 
   set_regs: process (clk_i) is
   begin  -- process set_regs
