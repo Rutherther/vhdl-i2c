@@ -17,7 +17,7 @@ architecture a1 of open_drain_buffer is
 
 begin  -- architecture a1
 
-  pad_io <= '0' when enable_i = '0' else
+  pad_io <= '0' when enable_i = '1' else
             'Z';
 
   state_o <= pad_io;
