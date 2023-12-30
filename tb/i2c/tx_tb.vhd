@@ -128,6 +128,7 @@ begin  -- architecture a1
       start_write_i         => start_write,
       ss_condition_i        => '0',
       expect_ack_i          => '1',
+      clear_buffer_i        => '0',
       err_noack_o           => err_noack,
       scl_stretch_o         => scl_stretch,
       scl_rising_pulse_i    => scl_rising_pulse,
