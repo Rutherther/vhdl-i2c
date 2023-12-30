@@ -30,6 +30,8 @@ architecture a1 of rx_tb is
   signal confirm_read : std_logic := '0';
   signal read_data : std_logic_vector(7 downto 0);
 
+  signal one : std_logic := '1';
+
   procedure trigger_scl_pulse(
     signal scl_rising_pulse : inout std_logic;
     signal scl_falling_pulse : inout std_logic) is
@@ -199,4 +201,5 @@ begin  -- architecture a1
     test_runner_cleanup(runner);
   end process;
 
+  stability_check: check_stable(clk, one, scl_rising_pulse, scl_falling_pulse, sda_enable);
 end architecture a1;

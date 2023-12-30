@@ -13,6 +13,7 @@ entity i2c_slave_state is
     address_detect_success_i : in  std_logic;
     address_detect_fail_i    : in  std_logic;
     address_detect_start_o   : out std_logic;
+    address_detect_o         : out std_logic;
 
     receive_o                : out std_logic;
     transmit_o               : out std_logic;
@@ -38,6 +39,7 @@ begin  -- architecture a1
   communicating_with_master <= '1' when curr_state = BUS_ADDRESS or curr_state = RECEIVING or curr_state = TRANSMITTING else '0';
 
   address_detect_start_o <= '1' when start_condition_i = '1' else '0';
+  address_detect_o <= '1' when curr_state = BUS_ADDRESS else '0';
 
   receive_o <= '1' when curr_state = RECEIVING else '0';
   transmit_o <= '1' when curr_state = TRANSMITTING else '0';

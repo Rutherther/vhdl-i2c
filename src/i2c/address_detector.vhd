@@ -10,6 +10,8 @@ entity address_detector is
     rst_in      : in  std_logic;        -- Reset the detection
     address_i   : in  std_logic_vector(6 downto 0);
     scl_pulse_i : in  std_logic;
+    scl_falling_delayed_i : in  std_logic;
+    sda_enable_o : out std_logic;
     sda_i      : in  std_logic;   -- The data that could contain the address
     start_i     : in  std_logic;        -- When to start looking for the
                                         -- address. Will clear success_o
@@ -23,7 +25,7 @@ entity address_detector is
 end entity address_detector;
 
 architecture a1 of address_detector is
-  type state_t is (IDLE, CHECKING_START, CHECKING, MATCH, FAIL);
+  type state_t is (IDLE, CHECKING_START, CHECKING, ACK, ACK_ON, MATCH, FAIL);
   signal curr_state : state_t;
   signal next_state : state_t;
 
@@ -49,6 +51,8 @@ begin  -- architecture a1
 
   mismatch <= '1' when curr_index <= 6 and address_i(6 - curr_index) /= sda_i and scl_pulse_i = '1' else '0';
 
+  sda_enable_o <= '1' when curr_state = ACK_ON else '0';
+
   set_next_state: process (all) is
   begin  -- process set_next_state
     next_state <= curr_state;
@@ -61,6 +65,16 @@ begin  -- architecture a1
       if mismatch = '1' then
         next_state <= FAIL;
       elsif curr_index = 7 and scl_pulse_i = '1' then
+        next_state <= ACK;
+      end if;
+    end if;
+
+    if curr_state = ACK then
+      if scl_falling_delayed_i = '1' then
+        next_state <= ACK_ON;
+      end if;
+    elsif curr_state = ACK_ON then
+      if scl_falling_delayed_i = '1' then
         next_state <= MATCH;
       end if;
     end if;

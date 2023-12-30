@@ -12,7 +12,7 @@ entity slave is
     rst_in       : in std_logic;        -- Synchronous reset (active low)
 
     -- address
-    address_i      : in std_logic_vector(7 downto 0);  -- Address of the slave
+    address_i      : in std_logic_vector(6 downto 0);  -- Address of the slave
     generate_ack_i : in std_logic;
     expect_ack_i   : in std_logic;
 
@@ -20,12 +20,14 @@ entity slave is
     rx_valid_o   : out std_logic;       -- Data in rx_data are valid
     rx_data_o    : out std_logic_vector(7 downto 0);  -- Received data
     rx_confirm_i : in std_logic;        -- Confirm data from rx_data are read
+    rx_stretch_i : in std_logic;
 
     -- tx
     tx_ready_o   : out std_logic;       -- Transmitter ready for new data
     tx_valid_i   : in std_logic;        -- Are data in tx_data valid? Should be
                                         -- a pulse for one cycle only
     tx_data_i    : in std_logic_vector(7 downto 0);  -- Data to transmit
+    tx_stretch_i : in std_logic;
 
     -- errors
     err_noack_o  : out std_logic;
@@ -49,7 +51,6 @@ architecture a1 of slave is
   signal scl_rising_pulse, scl_falling_pulse : std_logic;
 
   signal transmitting, receiving : std_logic;
-  signal start_transmit, start_receive : std_logic;
 
   signal tx_sda_enable : std_logic;
   signal tx_scl_stretch : std_logic;
@@ -57,11 +58,14 @@ architecture a1 of slave is
   signal rx_sda_enable : std_logic;
   signal rx_scl_stretch : std_logic;
 
+  signal address_detect_sda_enable : std_logic;
+
   signal bus_busy : std_logic;
 
   signal address_detect_activate : std_logic;
   signal address_detect_success : std_logic;
   signal address_detect_fail : std_logic;
+  signal address_detection : std_logic;
 
   signal rw : std_logic;
   signal ss_condition : std_logic;
@@ -73,12 +77,13 @@ begin  -- architecture a1
   bus_busy_o <= bus_busy;
   ss_condition <= start_condition or stop_condition;
 
-  scl_enable_o <= tx_scl_stretch when transmitting = '1' else
-                  rx_scl_stretch when receiving = '1' else
+  scl_enable_o <= tx_scl_stretch when transmitting = '1' and tx_stretch_i = '1' and scl_i = '0' else
+                  rx_scl_stretch when receiving = '1' and rx_stretch_i = '1' and scl_i = '0' else
                   '0';
 
   sda_enable_o <= tx_sda_enable when transmitting = '1' else
                   rx_sda_enable when receiving = '1' else
+                  address_detect_sda_enable when address_detection = '1' else
                   '0';
 
   scl_falling_delayer: entity utils.delay
@@ -122,7 +127,7 @@ begin  -- architecture a1
     port map (
       clk_i                 => clk_i,
       rst_in                => rst_in,
-      start_read_i          => start_receive,
+      start_read_i          => receiving,
       generate_ack_i        => generate_ack_i,
       ss_condition_i        => ss_condition,
       scl_pulse_i           => scl_rising_pulse,
@@ -140,7 +145,7 @@ begin  -- architecture a1
     port map (
       clk_i                 => clk_i,
       rst_in                => rst_in,
-      start_write_i         => start_transmit,
+      start_write_i         => transmitting,
       expect_ack_i          => expect_ack_i,
       err_noack_o           => err_noack_o,
       ss_condition_i        => ss_condition,
@@ -153,19 +158,21 @@ begin  -- architecture a1
       valid_i               => tx_valid_i,
       write_data_i          => tx_data_i);
 
-  address_detector: entity work.address_detector
+  address_detector : entity work.address_detector
     port map (
-      clk_i       => clk_i,
-      rst_in      => rst_in,
-      address_i   => address_i,
-      scl_pulse_i => scl_rising_pulse,
-      sda_i       => sync_sda,
-      start_i     => address_detect_activate,
-      rw_o        => rw,
-      success_o   => address_detect_success,
-      fail_o      => address_detect_fail);
+      clk_i                 => clk_i,
+      rst_in                => rst_in,
+      address_i             => address_i,
+      scl_pulse_i           => scl_rising_pulse,
+      scl_falling_delayed_i => scl_falling_delayed,
+      sda_enable_o          => address_detect_sda_enable,
+      sda_i                 => sync_sda,
+      start_i               => address_detect_activate,
+      rw_o                  => rw,
+      success_o             => address_detect_success,
+      fail_o                => address_detect_fail);
 
-  state_machine: entity work.i2c_slave_state
+  state_machine : entity work.i2c_slave_state
     port map (
       clk_i                    => clk_i,
       rst_in                   => rst_in,
@@ -175,6 +182,7 @@ begin  -- architecture a1
       address_detect_success_i => address_detect_success,
       address_detect_fail_i    => address_detect_fail,
       address_detect_start_o   => address_detect_activate,
+      address_detect_o         => address_detection,
       receive_o                => receiving,
       transmit_o               => transmitting,
       bus_busy_o               => bus_busy);
