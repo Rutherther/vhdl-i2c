@@ -46,7 +46,7 @@ begin
   tx_valid <= tx_ready;
   tx_data <= std_logic_vector(curr_count);
 
-  uut: entity i2c.slave
+  i2c_slave: entity i2c.slave
     generic map (
       SCL_FALLING_DELAY => 1)
     port map (

@@ -83,7 +83,7 @@ begin
     end if;
   end process set_next_regs;
 
-  uut: entity i2c.slave
+  i2c_slave: entity i2c.slave
     generic map (
       SCL_FALLING_DELAY => 1)
     port map (
