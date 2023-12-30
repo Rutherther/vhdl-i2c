@@ -8,9 +8,15 @@ context vunit_lib.vunit_context;
 use work.tb_pkg.all;
 
 package tb_i2c_pkg is
+  type std_logic_arr_t is array (natural range <>) of std_logic;
+  function f_resolve_pull_up (
+    constant signals : std_logic_arr_t)
+    return std_logic;
 
-  signal sda : std_logic;
-  signal scl : std_logic;
+  subtype pull_up_std_logic is f_resolve_pull_up std_logic;
+
+  signal sda : pull_up_std_logic;
+  signal scl : pull_up_std_logic;
 
   signal tx_ready : std_logic;
   signal rx_valid : std_logic;
@@ -45,6 +51,19 @@ package tb_i2c_pkg is
 end package tb_i2c_pkg;
 
 package body tb_i2c_pkg is
+  function f_resolve_pull_up (
+    constant signals : std_logic_arr_t)
+    return std_logic is
+    variable sig : std_logic := '1';
+  begin
+    for i in signals'range loop
+      if signals(i) = '0' then
+        sig := '0';
+      end if;
+    end loop;  -- i
+
+    return sig;
+  end function f_resolve_pull_up;
 
   procedure scl_fall (
     signal scl_override : inout std_logic) is
@@ -111,7 +130,7 @@ package body tb_i2c_pkg is
     signal tx_valid : inout std_logic
     ) is
   begin
-    check_equal(tx_ready, '1');
+    check_equal(tx_ready, '1', "not ready when trying to write data!");
     tx_data <= data;
     tx_valid <= '1';
     wait until falling_edge(clk);
@@ -123,8 +142,8 @@ package body tb_i2c_pkg is
     signal rx_confirm_read : inout std_logic
     ) is
   begin
-    check_equal(rx_valid, '1');
-    check_equal(rx_data, exp_data);
+    check_equal(rx_valid, '1', "not valid when trying to read data!");
+    check_equal(rx_data, exp_data, "Read rx data not equal to expected");
     rx_confirm_read <= '1';
     wait until falling_edge(clk);
     rx_confirm_read <= '0';
