@@ -27,7 +27,6 @@ architecture tb of counter_tb is
   signal rst_n : std_logic := '0';
   signal rst : std_logic;
 
-  signal scl_override, sda_override : std_logic := '0';
   signal not_scl : std_logic;
 
   signal err_noack          : std_logic;
@@ -53,8 +52,6 @@ begin  -- architecture tb
   sda <= 'H';
   scl <= 'H';
 
-  sda <= '0' when sda_override = '1' else 'Z';
-  scl <= '0' when scl_override = '1' else 'Z';
   not_scl <= not scl;
 
   clk <= not clk after CLK_PERIOD / 2;
@@ -72,17 +69,17 @@ begin  -- architecture tb
 
     while test_suite loop
       if run("wrapping_counting") then
-        i2c_master_start(ADDRESS, '1', scl_override, sda_override);
+        i2c_master_start(ADDRESS, '1', scl, sda);
 
         for i in 0 to 99 loop
-          i2c_master_receive(std_logic_vector(to_unsigned(i, 8)), scl_override, sda_override);
+          i2c_master_receive(std_logic_vector(to_unsigned(i, 8)), scl, sda);
         end loop;  -- i
 
         -- starting over
-        i2c_master_receive("00000000", scl_override, sda_override);
-        i2c_master_receive("00000001", scl_override, sda_override);
+        i2c_master_receive("00000000", scl, sda);
+        i2c_master_receive("00000001", scl, sda);
 
-        i2c_master_stop(scl_override, sda_override);
+        i2c_master_stop(scl, sda);
       end if;
     end loop;
 

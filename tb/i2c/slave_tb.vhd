@@ -21,14 +21,12 @@ architecture tb of slave_tb is
   constant CLK_PERIOD : time := 10 ns;
   signal rst_n : std_logic := '0';
 
-  signal sda_override : std_logic := '0';
   signal slave_sda_enable : std_logic;
   signal slave_sda : std_logic;
 
   signal address : std_logic_vector(6 downto 0);
 
   signal not_scl : std_logic;
-  signal scl_override : std_logic := '0';
   signal slave_scl_enable : std_logic;
   signal slave_scl : std_logic;
 
@@ -50,9 +48,6 @@ begin  -- architecture tb
 
   sda <= 'H';
   scl <= 'H';
-
-  sda <= '0' when sda_override = '1' else 'Z';
-  scl <= '0' when scl_override = '1' else 'Z';
 
   sda <= '0' when slave_sda_enable = '1' else 'Z';
   scl <= '0' when slave_scl_enable = '1' else 'Z';
@@ -107,44 +102,44 @@ begin  -- architecture tb
       if run("simple_read") then
         address <= "1100001";
 
-        i2c_master_start("1100001", '1', scl_override, sda_override);
+        i2c_master_start("1100001", '1', scl, sda);
 
         tx_write_data("11010100", tx_data, tx_valid);
         tx_write_data("00110011", tx_data, tx_valid);
 
-        i2c_master_receive("11010100", scl_override, sda_override);
+        i2c_master_receive("11010100", scl, sda);
         check_equal(rw, '1');
         check_equal(dev_busy, '1');
 
-        i2c_master_receive("00110011", scl_override, sda_override);
-        i2c_master_stop(scl_override, sda_override);
+        i2c_master_receive("00110011", scl, sda);
+        i2c_master_stop(scl, sda);
         wait until falling_edge(clk);
         wait until falling_edge(clk);
         check_equal(dev_busy, '0');
         check_equal(bus_busy, '0');
       elsif run("simple_write") then
         address <= "1100000";
-        i2c_master_start("1100000", '0', scl_override, sda_override);
-        i2c_master_transmit("11010100", scl_override, sda_override);
+        i2c_master_start("1100000", '0', scl, sda);
+        i2c_master_transmit("11010100", scl, sda);
         check_equal(rw, '0');
         check_equal(dev_busy, '1');
 
         rx_read_data("11010100", rx_confirm);
-        i2c_master_transmit("11001100", scl_override, sda_override);
+        i2c_master_transmit("11001100", scl, sda);
         rx_read_data("11001100", rx_confirm);
-        i2c_master_stop(scl_override, sda_override);
+        i2c_master_stop(scl, sda);
         wait until falling_edge(clk);
         wait until falling_edge(clk);
         check_equal(dev_busy, '0');
         check_equal(bus_busy, '0');
       elsif run("different_address") then
         address <= "1111000";
-        i2c_master_start("1100000", '0', scl_override, sda_override, exp_ack => '0');
-        i2c_master_transmit("11010100", scl_override, sda_override, exp_ack => '0');
+        i2c_master_start("1100000", '0', scl, sda, exp_ack => '0');
+        i2c_master_transmit("11010100", scl, sda, exp_ack => '0');
 
         check_equal(dev_busy, '0');
         check_equal(bus_busy, '1');
-        i2c_master_stop(scl_override, sda_override);
+        i2c_master_stop(scl, sda);
 
         wait until falling_edge(clk);
         wait until falling_edge(clk);
@@ -153,19 +148,19 @@ begin  -- architecture tb
       elsif run("read_noack") then
         address <= "1100001";
 
-        i2c_master_start("1100001", '1', scl_override, sda_override);
+        i2c_master_start("1100001", '1', scl, sda);
 
         tx_write_data("11010100", tx_data, tx_valid);
 
         check_equal(err_noack, '0');
 
-        i2c_master_receive("11010100", scl_override, sda_override, ack => '0');
+        i2c_master_receive("11010100", scl, sda, ack => '0');
         check_equal(rw, '1');
         check_equal(dev_busy, '1');
 
         check_equal(err_noack, '1');
 
-        i2c_master_stop(scl_override, sda_override);
+        i2c_master_stop(scl, sda);
 
         wait until falling_edge(clk);
         wait until falling_edge(clk);
@@ -173,24 +168,24 @@ begin  -- architecture tb
         check_equal(bus_busy, '0');
       elsif run("write_read") then
         address <= "1100000";
-        i2c_master_start("1100000", '0', scl_override, sda_override);
-        i2c_master_transmit("11010100", scl_override, sda_override);
+        i2c_master_start("1100000", '0', scl, sda);
+        i2c_master_transmit("11010100", scl, sda);
         check_equal(rw, '0');
         check_equal(dev_busy, '1');
 
         rx_read_data("11010100", rx_confirm);
 
-        i2c_master_start("1100000", '1', scl_override, sda_override);
+        i2c_master_start("1100000", '1', scl, sda);
 
         tx_write_data("11010100", tx_data, tx_valid);
-        i2c_master_receive("11010100", scl_override, sda_override);
+        i2c_master_receive("11010100", scl, sda);
         check_equal(rw, '1');
         check_equal(dev_busy, '1');
 
         tx_write_data("00001111", tx_data, tx_valid);
-        i2c_master_receive("00001111", scl_override, sda_override);
+        i2c_master_receive("00001111", scl, sda);
 
-        i2c_master_stop(scl_override, sda_override);
+        i2c_master_stop(scl, sda);
         wait until falling_edge(clk);
         wait until falling_edge(clk);
         check_equal(dev_busy, '0');

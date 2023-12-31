@@ -8,28 +8,28 @@ context vunit_lib.vunit_context;
 use work.tb_pkg.all;
 
 package tb_i2c_pkg is
-  signal sda : std_logic;
-  signal scl : std_logic;
+  signal sda : std_logic := 'H';
+  signal scl : std_logic := 'H';
 
   signal tx_ready : std_logic;
   signal rx_valid : std_logic;
   signal rx_data : std_logic_vector(7 downto 0);
 
   procedure scl_fall (
-    signal scl_override : inout std_logic);
+    signal scl : inout std_logic);
 
   procedure scl_rise (
-    signal scl_override : inout std_logic);
+    signal scl : inout std_logic);
 
   procedure scl_pulse (
-    signal scl_override : inout std_logic);
+    signal scl : inout std_logic);
 
   procedure sda_fall (
-    signal sda_override : inout std_logic;
+    signal sda : inout std_logic;
     constant assert_no_condition : in std_logic := '1');
 
   procedure sda_rise (
-    signal sda_override : inout std_logic;
+    signal sda : inout std_logic;
     constant assert_no_condition : in std_logic := '1');
 
   procedure tx_write_data (
@@ -45,9 +45,9 @@ end package tb_i2c_pkg;
 
 package body tb_i2c_pkg is
   procedure scl_fall (
-    signal scl_override : inout std_logic) is
+    signal scl : inout std_logic) is
   begin  -- procedure scl_rise
-    scl_override <= '1';
+    scl <= '0';
     wait until falling_edge(clk);
     wait until falling_edge(clk);
     wait until falling_edge(clk);
@@ -55,12 +55,12 @@ package body tb_i2c_pkg is
   end procedure scl_fall;
 
   procedure scl_rise (
-    signal scl_override : inout std_logic) is
+    signal scl : inout std_logic) is
   begin  -- procedure scl_rise
     wait until falling_edge(clk);
     wait until falling_edge(clk);
     wait until falling_edge(clk);
-    scl_override <= '0';
+    scl <= 'Z';
     wait until falling_edge(clk);
     wait until falling_edge(clk);
     wait until falling_edge(clk);
@@ -71,35 +71,35 @@ package body tb_i2c_pkg is
   end procedure scl_rise;
 
   procedure scl_pulse (
-    signal scl_override : inout std_logic) is
+    signal scl : inout std_logic) is
   begin  -- procedure scl_rise
-    scl_rise(scl_override);
+    scl_rise(scl);
     wait until falling_edge(clk);
     wait until falling_edge(clk);
-    scl_fall(scl_override);
+    scl_fall(scl);
   end procedure scl_pulse;
 
   procedure sda_fall (
-    signal sda_override : inout std_logic;
+    signal sda : inout std_logic;
     constant assert_no_condition : in std_logic := '1') is
   begin  -- procedure scl_rise
     if assert_no_condition = '1' and sda /= '0' then
       check_equal(scl, '0', "Cannot change sda as that would trigger start condition.", failure);
     end if;
 
-    sda_override <= '1';
+    sda <= '0';
     wait until falling_edge(clk);
   end procedure sda_fall;
 
   procedure sda_rise (
-    signal sda_override : inout std_logic;
+    signal sda : inout std_logic;
     constant assert_no_condition : in std_logic := '1') is
   begin  -- procedure scl_rise
     if assert_no_condition = '1' and sda /= '0' then
       check_equal(scl, '0', "Cannot change sda as that would trigger stop condition.", failure);
     end if;
 
-    sda_override <= '0';
+    sda <= 'Z';
     wait until falling_edge(clk);
   end procedure sda_rise;
 
