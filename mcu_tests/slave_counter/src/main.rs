@@ -39,10 +39,7 @@ fn main() -> ! {
     loop {
         let res = i2c.read(ADDRESS, &mut buffer);
         if res.is_ok() {
-            for data in buffer {
-                hprintln!("Got: {data}");
-                dbg!(data);
-            }
+            dbg!(buffer);
         }
         else {
             hprintln!("Got an error when trying to read :(");

@@ -34,31 +34,30 @@ fn main() -> ! {
 
     let mut delay = Delay::new(cp.SYST, &clocks);
 
-    let mut buffer: [u8; 5] = [0; 5];
+    let mut buffer: [u8; 20] = [0; 20];
     let mut count: u8 = 0;
     const ADDRESS: u8 = 0b1110101;
     fn write_on(buffer: &mut [u8], address: u8, count: &mut u8) {
-        for data in buffer.iter_mut() {
+        for data in buffer[1..=5].iter_mut() {
             *data = *count;
             *count = (*count).wrapping_add(1);
         }
         buffer[0] = address;
     }
 
-    let mut rx_buffer: [u8; 20] = [0; 20];
     loop {
-        write_on(&mut buffer, 0, &mut count);
-        if i2c.write(ADDRESS, &mut buffer).is_err() {
+        write_on(&mut buffer[0..=5], 0, &mut count);
+        if i2c.write(ADDRESS, &mut buffer[0..=5]).is_err() {
             hprintln!("There was an error during write");
         }
-        write_on(&mut buffer, 10, &mut count);
-        if i2c.write(ADDRESS, &mut buffer).is_err() {
+        write_on(&mut buffer[0..=5], 10, &mut count);
+        if i2c.write(ADDRESS, &mut buffer[0..=5]).is_err() {
             hprintln!("There was an error during write");
         }
 
-        let res = i2c.write_read(ADDRESS, &[0], &mut rx_buffer);
+        let res = i2c.write_read(ADDRESS, &[0], &mut buffer);
         if res.is_ok() {
-            dbg!(rx_buffer);
+            dbg!(buffer);
         }
         else {
             hprintln!("Got an error when trying to read :(");
