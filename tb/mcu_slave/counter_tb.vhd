@@ -49,8 +49,12 @@ begin  -- architecture tb
       scl_io      => scl
     );
 
-  sda <= not sda_override;
-  scl <= not scl_override;
+  -- pull up
+  sda <= 'H';
+  scl <= 'H';
+
+  sda <= '0' when sda_override = '1' else 'Z';
+  scl <= '0' when scl_override = '1' else 'Z';
   not_scl <= not scl;
 
   clk <= not clk after CLK_PERIOD / 2;

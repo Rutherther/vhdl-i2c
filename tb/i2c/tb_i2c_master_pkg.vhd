@@ -62,7 +62,7 @@ package body tb_i2c_master_pkg is
 
   begin  -- procedure transmit
     check_equal(scl_override, '0', "Cannot start sending when scl is not in default state (1).", failure);
-    check_equal(scl, '1', "Cannot start sending when scl is not in default state (1). Seems like the slave is clock stretching. This is not supported by transmit since data have to be supplied or read.", failure);
+    check_equal(scl, 'H', "Cannot start sending when scl is not in default state (1). Seems like the slave is clock stretching. This is not supported by transmit since data have to be supplied or read.", failure);
 
     scl_fall(scl_override);
 
@@ -77,7 +77,7 @@ package body tb_i2c_master_pkg is
     if exp_ack = '1' then
       check_equal(sda, '0', "No acknowledge");
     elsif exp_ack = '0' then
-      check_equal(sda, '1', "There was acknowledge even though there shouldn't have been");
+      check_equal(sda, 'H', "There was acknowledge even though there shouldn't have been");
     end if;
 
     if stop_condition = '1' then
@@ -100,7 +100,7 @@ package body tb_i2c_master_pkg is
 
   begin  -- procedure transmit
     check_equal(scl_override, '0', "Cannot start receiving when scl is not in default state (1).", failure);
-    check_equal(scl, '1', "Cannot start receiving when scl is not in default state (1). Seems like the slave is clock stretching. This is not supported by transmit since data have to be supplied or read.", failure);
+    check_equal(scl, 'H', "Cannot start receiving when scl is not in default state (1). Seems like the slave is clock stretching. This is not supported by transmit since data have to be supplied or read.", failure);
 
     scl_fall(scl_override);
     sda_override <= '0';
@@ -108,7 +108,11 @@ package body tb_i2c_master_pkg is
     -- data
     for i in 7 downto 0 loop
       scl_rise(scl_override);
-      check_equal(sda, exp_data(i), "Received data (sda) not as expected");
+      if exp_data(i) = '1' then
+        check(sda = '1' or sda = 'H', result("Received data (sda) not as expected."));
+      else
+        check(sda = '0' or sda = 'L', result("Received data (sda) not as expected."));
+      end if;
       scl_fall(scl_override);
     end loop;  -- i
 
@@ -136,7 +140,7 @@ package body tb_i2c_master_pkg is
     signal sda_override : inout std_logic;
     constant exp_ack : in std_logic := '1') is
   begin
-    if scl = '1' and sda = '0' then
+    if scl = 'H' and sda = '0' then
       scl_fall(scl_override);
     end if;
 
@@ -148,8 +152,8 @@ package body tb_i2c_master_pkg is
       scl_rise(scl_override);
     end if;
 
-    check_equal(sda, '1', "Cannot start sending when sda is not in default state (1).", failure);
-    check_equal(scl, '1', "Cannot start sending when scl is not in default state (1).", failure);
+    check_equal(sda, 'H', "Cannot start sending when sda is not in default state (1).", failure);
+    check_equal(scl, 'H', "Cannot start sending when scl is not in default state (1).", failure);
 
     -- start condition
     sda_fall(sda_override, '0');

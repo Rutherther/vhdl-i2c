@@ -8,15 +8,8 @@ context vunit_lib.vunit_context;
 use work.tb_pkg.all;
 
 package tb_i2c_pkg is
-  type std_logic_arr_t is array (natural range <>) of std_logic;
-  function f_resolve_pull_up (
-    constant signals : std_logic_arr_t)
-    return std_logic;
-
-  subtype pull_up_std_logic is f_resolve_pull_up std_logic;
-
-  signal sda : pull_up_std_logic;
-  signal scl : pull_up_std_logic;
+  signal sda : std_logic;
+  signal scl : std_logic;
 
   signal tx_ready : std_logic;
   signal rx_valid : std_logic;
@@ -51,20 +44,6 @@ package tb_i2c_pkg is
 end package tb_i2c_pkg;
 
 package body tb_i2c_pkg is
-  function f_resolve_pull_up (
-    constant signals : std_logic_arr_t)
-    return std_logic is
-    variable sig : std_logic := '1';
-  begin
-    for i in signals'range loop
-      if signals(i) = '0' then
-        sig := '0';
-      end if;
-    end loop;  -- i
-
-    return sig;
-  end function f_resolve_pull_up;
-
   procedure scl_fall (
     signal scl_override : inout std_logic) is
   begin  -- procedure scl_rise

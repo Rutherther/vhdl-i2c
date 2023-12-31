@@ -23,12 +23,14 @@ architecture tb of slave_tb is
 
   signal sda_override : std_logic := '0';
   signal slave_sda_enable : std_logic;
+  signal slave_sda : std_logic;
 
   signal address : std_logic_vector(6 downto 0);
 
   signal not_scl : std_logic;
   signal scl_override : std_logic := '0';
   signal slave_scl_enable : std_logic;
+  signal slave_scl : std_logic;
 
   signal dev_busy, bus_busy : std_logic;
   signal err_noack : std_logic;
@@ -46,8 +48,17 @@ begin  -- architecture tb
   clk <= not clk after CLK_PERIOD / 2;
   rst_n <= '1' after 2 * CLK_PERIOD;
 
-  scl <= not scl_override and not slave_scl_enable;
-  sda <= not sda_override and not slave_sda_enable;
+  sda <= 'H';
+  scl <= 'H';
+
+  sda <= '0' when sda_override = '1' else 'Z';
+  scl <= '0' when scl_override = '1' else 'Z';
+
+  sda <= '0' when slave_sda_enable = '1' else 'Z';
+  scl <= '0' when slave_scl_enable = '1' else 'Z';
+
+  slave_sda <= '1' when sda = 'H' else sda;
+  slave_scl <= '1' when scl = 'H' else scl;
 
   not_scl <= not scl;
 
@@ -76,8 +87,8 @@ begin  -- architecture tb
       rw_o           => rw,
       dev_busy_o     => dev_busy,
       bus_busy_o     => bus_busy,
-      sda_i          => sda,
-      scl_i          => scl,
+      sda_i          => slave_sda,
+      scl_i          => slave_scl,
       sda_enable_o   => slave_sda_enable,
       scl_enable_o   => slave_scl_enable);
 
