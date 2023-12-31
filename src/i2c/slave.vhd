@@ -156,6 +156,9 @@ begin  -- architecture a1
       scl_stretch_o         => tx_scl_stretch,
       sda_i                 => sda_i,
       sda_enable_o          => tx_sda_enable,
+      unexpected_sda_o      => open,    -- ignore in the slave, nothing to do?
+                                        -- TODO output an error if unexpected
+                                        -- level when transmitting
       ready_o               => tx_ready_o,
       valid_i               => tx_valid_i,
       write_data_i          => tx_data_i);

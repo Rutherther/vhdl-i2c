@@ -29,6 +29,8 @@ architecture a1 of tx_tb is
   signal write_data : std_logic_vector(7 downto 0);
   signal scl_stretch : std_logic;
 
+  signal unexpected_sda : std_logic;
+
   signal err_noack : std_logic;
 
   signal validate_sda_stable_when_scl_high : std_logic := '0';
@@ -133,6 +135,7 @@ begin  -- architecture a1
       scl_stretch_o         => scl_stretch,
       scl_rising_pulse_i    => scl_rising_pulse,
       scl_falling_delayed_i => scl_falling_pulse,
+      unexpected_sda_o      => unexpected_sda,
       sda_enable_o          => sda_enable,
       sda_i                 => sda,
       ready_o               => ready,

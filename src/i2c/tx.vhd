@@ -24,10 +24,11 @@ entity tx is
     clk_i               : in  std_logic;
     rst_in              : in  std_logic;
     start_write_i       : in  std_logic;
-    ss_condition_i      : in std_logic;    -- Reset rx circuitry
-    clear_buffer_i      : in std_logic;
+    ss_condition_i      : in  std_logic;    -- Reset rx circuitry
+    clear_buffer_i      : in  std_logic;
 
-    expect_ack_i        : in std_logic;
+    expect_ack_i        : in  std_logic;
+    unexpected_sda_o    : out std_logic;
     err_noack_o         : out std_logic;
 
     scl_rising_pulse_i  : in  std_logic;
@@ -80,6 +81,7 @@ begin  -- architecture a1
   scl_stretch_o <= '1' when curr_state = WAITING_FOR_DATA else '0';
   ready_o <= ready and not curr_err_noack;
   sda_enable_o <= not tx_buffer(8) when curr_state = SENDING else '0';
+  unexpected_sda_o <= '1' when curr_state = SENDING and sda_i /= tx_buffer(8) else '0';
   err_noack_o <= curr_err_noack;
 
   ready <= '0' when curr_tx_buffers_filled(curr_saving_buffer_index) = '1' or curr_err_noack = '1' else '1';
