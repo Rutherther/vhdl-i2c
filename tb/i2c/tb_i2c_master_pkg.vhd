@@ -92,8 +92,8 @@ package body tb_i2c_master_pkg is
 
   procedure i2c_master_receive (
     constant exp_data       : in    std_logic_vector(7 downto 0);
-    signal scl     : inout std_logic;
-    signal sda     : inout std_logic;
+    signal scl              : inout std_logic;
+    signal sda              : inout std_logic;
     constant ack            : in    std_logic := '1';
     constant stop_condition : in    std_logic := '0') is
 
@@ -134,9 +134,9 @@ package body tb_i2c_master_pkg is
   procedure i2c_master_start (
     constant address : in    std_logic_vector(6 downto 0);
     constant rw      : in    std_logic;
-    signal scl : inout std_logic;
-    signal sda : inout std_logic;
-    constant exp_ack : in std_logic := '1') is
+    signal scl       : inout std_logic;
+    signal sda       : inout std_logic;
+    constant exp_ack : in    std_logic := '1') is
   begin
     if scl = 'H' and sda = '0' then
       scl_fall(scl);

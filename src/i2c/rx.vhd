@@ -24,7 +24,7 @@ entity rx is
     clk_i          : in  std_logic;     -- Clock
     rst_in         : in  std_logic;     -- Reset (asynchronous)
     start_read_i   : in  std_logic;     -- Start reading with next scl_pulse
-    ss_condition_i : in  std_logic;     -- Reset rx circuitry
+    rst_i2c_i      : in  std_logic;     -- Reset rx circuitry
 
     scl_pulse_i    : in  std_logic;     -- SCL rising edge pulse
     scl_falling_delayed_i    : in  std_logic;     -- SCL rising edge pulse
@@ -125,7 +125,7 @@ begin  -- architecture a1
       end if;
     end if;
 
-    if ss_condition_i = '1' then
+    if rst_i2c_i = '1' then
       next_state <= IDLE;
     end if;
   end process set_next_state;

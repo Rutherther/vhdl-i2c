@@ -31,11 +31,14 @@ architecture a1 of tx_tb is
 
   signal unexpected_sda : std_logic;
 
-  signal err_noack : std_logic;
+  signal noack : std_logic;
 
   signal validate_sda_stable_when_scl_high : std_logic := '0';
   signal check_noerr : std_logic := '0';
   signal zero : std_logic := '0';
+
+  signal curr_noack : std_logic;
+  signal next_noack : std_logic;
 
   procedure trigger_scl_pulse(
     signal scl : inout std_logic;
@@ -99,10 +102,10 @@ architecture a1 of tx_tb is
     end if;
 
     for i in 7 downto 0 loop
-      check_equal(sda_enable, not data(i));
+      check_equal(sda_enable, not data(i), "Unexpected sda enable");
 
       if check_ready /= 'Z' then
-        check_equal(ready, check_ready);
+        check_equal(ready, check_ready, "Unexpected ready");
       end if;
 
       check(scl_stretch = '0', "Cannot send when stretch is active", failure);
@@ -128,10 +131,9 @@ begin  -- architecture a1
       clk_i                 => clk,
       rst_in                => rst_n,
       start_write_i         => start_write,
-      ss_condition_i        => '0',
-      expect_ack_i          => '1',
+      rst_i2c_i             => '0',
       clear_buffer_i        => '0',
-      err_noack_o           => err_noack,
+      noack_o               => noack,
       scl_stretch_o         => scl_stretch,
       scl_rising_pulse_i    => scl_rising_pulse,
       scl_falling_delayed_i => scl_falling_pulse,
@@ -145,8 +147,22 @@ begin  -- architecture a1
   clk <= not clk after CLK_PERIOD / 2;
   rst_n <= '1' after 2 * CLK_PERIOD;
 
+
   sda <= '0' when sda_override = '1' else
          not sda_enable;
+
+  next_noack <= '1' when noack;
+
+  set_noack: process (clk) is
+  begin  -- process set_noack
+    if rising_edge(clk) then          -- rising clock edge
+      if rst_n = '0' then              -- synchronous reset (active low)
+        curr_noack <= '0';
+      else
+        curr_noack <= next_noack;
+      end if;
+    end if;
+  end process set_noack;
 
   main: process is
   begin  -- process
@@ -229,7 +245,7 @@ begin  -- architecture a1
         valid <= '0';
         check_noerr <= '0'; -- disable no err check
         check_received_data("11010100", '1', '0', sda_override, scl, scl_rising_pulse, scl_falling_pulse);
-        check_equal(err_noack, '1');
+        check_equal(curr_noack, '1');
         check_equal(sda_enable, '0');
       end if;
     end loop;
@@ -237,6 +253,7 @@ begin  -- architecture a1
     test_runner_cleanup(runner);
   end process;
 
-  no_err: check_stable(clk, check_noerr, check_noerr, zero, err_noack);
+  no_noack_err: check_stable(clk, check_noerr, check_noerr, zero, noack);
+  no_sda_unexpected_err: check_stable(clk, check_noerr, check_noerr, zero, unexpected_sda);
   stability_check: check_stable(clk, validate_sda_stable_when_scl_high, scl_rising_pulse, scl_falling_pulse, sda_enable);
 end architecture a1;

@@ -32,6 +32,7 @@ entity slave is
 
     -- errors
     err_noack_o  : out std_logic;
+    err_sda_o  : out std_logic;
 
     -- state
     rw_o         : out std_logic;       -- 1 - read, 0 - write
@@ -55,6 +56,7 @@ architecture a1 of slave is
 
   signal tx_sda_enable : std_logic;
   signal tx_scl_stretch : std_logic;
+  signal tx_noack, tx_unexpected_sda : std_logic;
 
   signal rx_sda_enable : std_logic;
   signal rx_scl_stretch : std_logic;
@@ -69,14 +71,13 @@ architecture a1 of slave is
   signal address_detection : std_logic;
 
   signal rw : std_logic;
-  signal ss_condition : std_logic;
+  signal rst_i2c : std_logic;
 
   signal scl_falling_delayed : std_logic;
 begin  -- architecture a1
   rw_o <= rw;
   dev_busy_o <= transmitting or receiving;
   bus_busy_o <= bus_busy;
-  ss_condition <= start_condition or stop_condition;
 
   scl_enable_o <= tx_scl_stretch when transmitting = '1' and tx_stretch_i = '1' and scl_i = '0' else
                   rx_scl_stretch when receiving = '1' and rx_stretch_i = '1' and scl_i = '0' else
@@ -124,13 +125,13 @@ begin  -- architecture a1
       stop_o  => stop_condition);
 
   -- rx
-  rx: entity work.rx
+  rx : entity work.rx
     port map (
       clk_i                 => clk_i,
       rst_in                => rst_in,
       start_read_i          => receiving,
       generate_ack_i        => generate_ack_i,
-      ss_condition_i        => ss_condition,
+      rst_i2c_i             => rst_i2c,
       scl_pulse_i           => scl_rising_pulse,
       scl_falling_delayed_i => scl_falling_delayed,
       scl_stretch_o         => rx_scl_stretch,
@@ -148,17 +149,14 @@ begin  -- architecture a1
       rst_in                => rst_in,
       clear_buffer_i        => tx_clear_buffer_i,
       start_write_i         => transmitting,
-      expect_ack_i          => expect_ack_i,
-      err_noack_o           => err_noack_o,
-      ss_condition_i        => ss_condition,
+      rst_i2c_i             => rst_i2c,
       scl_rising_pulse_i    => scl_rising_pulse,
       scl_falling_delayed_i => scl_falling_delayed,
       scl_stretch_o         => tx_scl_stretch,
       sda_i                 => sda_i,
       sda_enable_o          => tx_sda_enable,
-      unexpected_sda_o      => open,    -- ignore in the slave, nothing to do?
-                                        -- TODO output an error if unexpected
-                                        -- level when transmitting
+      unexpected_sda_o      => tx_unexpected_sda,
+      noack_o               => tx_noack,
       ready_o               => tx_ready_o,
       valid_i               => tx_valid_i,
       write_data_i          => tx_data_i);
@@ -181,8 +179,14 @@ begin  -- architecture a1
     port map (
       clk_i                    => clk_i,
       rst_in                   => rst_in,
+      rst_i2c_o                => rst_i2c,
       start_condition_i        => start_condition,
       stop_condition_i         => stop_condition,
+      err_noack_o              => err_noack_o,
+      err_sda_o                => err_sda_o,
+      unexpected_sda_i         => tx_unexpected_sda,
+      expect_ack_i             => expect_ack_i,
+      noack_i                  => tx_noack,
       rw_i                     => rw,
       address_detect_success_i => address_detect_success,
       address_detect_fail_i    => address_detect_fail,

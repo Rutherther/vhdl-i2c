@@ -24,12 +24,11 @@ entity tx is
     clk_i               : in  std_logic;
     rst_in              : in  std_logic;
     start_write_i       : in  std_logic;
-    ss_condition_i      : in  std_logic;    -- Reset rx circuitry
+    rst_i2c_i           : in  std_logic;    -- Reset rx circuitry
     clear_buffer_i      : in  std_logic;
 
-    expect_ack_i        : in  std_logic;
     unexpected_sda_o    : out std_logic;
-    err_noack_o         : out std_logic;
+    noack_o             : out std_logic;
 
     scl_rising_pulse_i  : in  std_logic;
     scl_falling_delayed_i : in  std_logic;
@@ -79,10 +78,10 @@ architecture a1 of tx is
   signal ready : std_logic;
 begin  -- architecture a1
   scl_stretch_o <= '1' when curr_state = WAITING_FOR_DATA else '0';
-  ready_o <= ready and not curr_err_noack;
+  ready_o <= ready;
   sda_enable_o <= not tx_buffer(8) when curr_state = SENDING else '0';
-  unexpected_sda_o <= '1' when curr_state = SENDING and sda_i /= tx_buffer(8) else '0';
-  err_noack_o <= curr_err_noack;
+  unexpected_sda_o <= '1' when curr_state = SENDING and sda_i /= tx_buffer(8) and scl_rising_pulse_i = '1' else '0';
+  noack_o <= '1' when curr_state = ACK and sda_i = '1' and scl_rising_pulse_i = '1' else '0';
 
   ready <= '0' when curr_tx_buffers_filled(curr_saving_buffer_index) = '1' or curr_err_noack = '1' else '1';
   tx_buffer <= curr_tx_buffers(curr_tx_buffer_index);
@@ -97,11 +96,6 @@ begin  -- architecture a1
 
   next_saving_buffer_index <= (curr_saving_buffer_index + 1) mod 2 when ready = '1' and valid_i = '1' else
                               curr_saving_buffer_index;
-
-  next_err_noack <= '0' when expect_ack_i = '0' else
-                    '1' when curr_err_noack = '1' else
-                    '1' when curr_state = ACK and scl_rising_pulse_i = '1' and sda_i = '1' else
-                    '0';
 
   set_next_tx_buffers: process(all) is
   begin  -- process set_next_tx_buffer
@@ -172,10 +166,6 @@ begin  -- architecture a1
       end if;
     end if;
 
-    if curr_err_noack = '1' then
-      next_state <= IDLE;               -- not doing anything after an error.
-                                        -- Waiting for ss condition or reset
-    end if;
   end process set_next_state;
 
   set_regs: process (clk_i) is
@@ -188,11 +178,9 @@ begin  -- architecture a1
         curr_tx_buffers_filled <= "00";
         curr_saving_buffer_index <= 0;
         curr_scl <= '1';                -- assume 1 (the default, no one transmitting)
-        curr_err_noack <= '0';
-      elsif ss_condition_i = '1' then
+      elsif rst_i2c_i = '1' then
         curr_state <= IDLE;
         curr_scl <= '1';                -- assume 1 (the default, no one transmitting)
-        curr_err_noack <= '0';
       else
         curr_state <= next_state;
         curr_tx_buffers <= next_tx_buffers;
@@ -200,7 +188,6 @@ begin  -- architecture a1
         curr_tx_buffers_filled <= next_tx_buffers_filled;
         curr_saving_buffer_index <= next_saving_buffer_index;
         curr_scl <= next_scl;
-        curr_err_noack <= next_err_noack;
       end if;
     end if;
   end process set_regs;

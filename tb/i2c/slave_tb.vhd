@@ -31,7 +31,7 @@ architecture tb of slave_tb is
   signal slave_scl : std_logic;
 
   signal dev_busy, bus_busy : std_logic;
-  signal err_noack : std_logic;
+  signal err_noack, err_sda : std_logic;
   signal rw : std_logic;
 
   signal rx_confirm : std_logic := '0';
@@ -78,14 +78,15 @@ begin  -- architecture tb
       tx_stretch_i   => '0',
       tx_clear_buffer_i => '0',
 
-      err_noack_o    => err_noack,
-      rw_o           => rw,
-      dev_busy_o     => dev_busy,
-      bus_busy_o     => bus_busy,
-      sda_i          => slave_sda,
-      scl_i          => slave_scl,
-      sda_enable_o   => slave_sda_enable,
-      scl_enable_o   => slave_scl_enable);
+      err_noack_o  => err_noack,
+      err_sda_o    => err_sda,
+      rw_o         => rw,
+      dev_busy_o   => dev_busy,
+      bus_busy_o   => bus_busy,
+      sda_i        => slave_sda,
+      scl_i        => slave_scl,
+      sda_enable_o => slave_sda_enable,
+      scl_enable_o => slave_scl_enable);
 
   -- stable sda_enable when scl high
   sda_stability_check: check_stable(clk, one, scl, not_scl, slave_sda_enable);
@@ -156,7 +157,6 @@ begin  -- architecture tb
 
         i2c_master_receive("11010100", scl, sda, ack => '0');
         check_equal(rw, '1');
-        check_equal(dev_busy, '1');
 
         check_equal(err_noack, '1');
 
@@ -164,6 +164,34 @@ begin  -- architecture tb
 
         wait until falling_edge(clk);
         wait until falling_edge(clk);
+        wait until falling_edge(clk);
+        check_equal(err_noack, '0');
+
+        wait until falling_edge(clk);
+        wait until falling_edge(clk);
+        check_equal(dev_busy, '0');
+        check_equal(bus_busy, '0');
+      elsif run("read_unexpected_sda") then
+        address <= "1100001";
+
+        i2c_master_start("1100001", '1', scl, sda);
+
+        tx_write_data("11010100", tx_data, tx_valid);
+
+        scl_fall(scl);
+        sda <= '0';
+
+        scl_rise(scl);
+
+        check_equal(err_sda, '1');
+
+        i2c_master_stop(scl, sda);
+
+        wait until falling_edge(clk);
+        wait until falling_edge(clk);
+        wait until falling_edge(clk);
+
+        check_equal(err_sda, '0');
         check_equal(dev_busy, '0');
         check_equal(bus_busy, '0');
       elsif run("write_read") then
