@@ -20,7 +20,7 @@ architecture a1 of rx_tb is
   signal rst_n : std_logic := '0';
 
   signal sda : std_logic := '0';
-  signal scl_rising_pulse, scl_falling_pulse : std_logic := '0';
+  signal scl_rising, scl_falling : std_logic := '0';
 
   signal start_read : std_logic := '0';
   signal valid, ready : std_logic;
@@ -33,19 +33,19 @@ architecture a1 of rx_tb is
   signal one : std_logic := '1';
 
   procedure trigger_scl_pulse(
-    signal scl_rising_pulse : inout std_logic;
-    signal scl_falling_pulse : inout std_logic) is
+    signal scl_rising : inout std_logic;
+    signal scl_falling : inout std_logic) is
   begin  -- procedure trigger_scl_pulse
-    scl_rising_pulse <= '0';
-    scl_falling_pulse <= '0';
+    scl_rising <= '0';
+    scl_falling <= '0';
     wait until falling_edge(clk);
-    scl_rising_pulse <= '1';
+    scl_rising <= '1';
     wait until falling_edge(clk);
-    scl_rising_pulse <= '0';
-    scl_falling_pulse <= '1';
+    scl_rising <= '0';
+    scl_falling <= '1';
     wait until falling_edge(clk);
-    scl_rising_pulse <= '0';
-    scl_falling_pulse <= '0';
+    scl_rising <= '0';
+    scl_falling <= '0';
   end procedure trigger_scl_pulse;
 
   procedure transmit (
@@ -54,8 +54,8 @@ architecture a1 of rx_tb is
     constant check_ready     : in    std_logic;
     signal start_read        : inout std_logic;
     signal sda               : inout std_logic;
-    signal scl_rising_pulse  : inout std_logic;
-    signal scl_falling_pulse : inout std_logic) is
+    signal scl_rising  : inout std_logic;
+    signal scl_falling : inout std_logic) is
   begin  -- procedure a
     start_read <= '1';
     wait until falling_edge(clk);
@@ -72,13 +72,13 @@ architecture a1 of rx_tb is
       check(scl_stretch = '0', "Cannot send when stretch is active", failure);
 
       sda <= data(i);
-      trigger_scl_pulse(scl_rising_pulse, scl_falling_pulse);
+      trigger_scl_pulse(scl_rising, scl_falling);
     end loop;  -- i
 
     -- ack
     check_equal(sda_enable, '1');
 
-    trigger_scl_pulse(scl_rising_pulse, scl_falling_pulse);
+    trigger_scl_pulse(scl_rising, scl_falling);
 
     check_equal(sda_enable, '0');
   end procedure transmit;
@@ -90,8 +90,8 @@ begin  -- architecture a1
       rst_i2c_i             => '0',
       generate_ack_i        => '1',
       start_read_i          => start_read,
-      scl_pulse_i           => scl_rising_pulse,
-      scl_falling_delayed_i => scl_falling_pulse,
+      scl_rising           => scl_rising,
+      scl_falling_delayed_i => scl_falling,
       sda_i                 => sda,
       sda_enable_o          => sda_enable,
       scl_stretch_o         => scl_stretch,
@@ -112,7 +112,7 @@ begin  -- architecture a1
 
     while test_suite loop
       if run("simple") then
-        transmit("11010100", '0', '1', start_read, sda, scl_rising_pulse, scl_falling_pulse);
+        transmit("11010100", '0', '1', start_read, sda, scl_rising, scl_falling);
         check_equal(valid, '1');
         check_equal(ready, '1');
         check_equal(scl_stretch, '0');
@@ -124,7 +124,7 @@ begin  -- architecture a1
         check_equal(valid, '0');
         check_equal(ready, '1');
       elsif run("twice") then
-        transmit("11010100", '0', '1', start_read, sda, scl_rising_pulse, scl_falling_pulse);
+        transmit("11010100", '0', '1', start_read, sda, scl_rising, scl_falling);
         check_equal(valid, '1');
         check_equal(ready, '1');
         check_equal(scl_stretch, '0');
@@ -135,7 +135,7 @@ begin  -- architecture a1
         check_equal(valid, '0');
         check_equal(ready, '1');
 
-        transmit("00111100", '0', '1', start_read, sda, scl_rising_pulse, scl_falling_pulse);
+        transmit("00111100", '0', '1', start_read, sda, scl_rising, scl_falling);
         check_equal(valid, '1');
         check_equal(ready, '1');
         check_equal(scl_stretch, '0');
@@ -146,13 +146,13 @@ begin  -- architecture a1
         check_equal(valid, '0');
         check_equal(ready, '1');
       elsif run("stretching") then
-        transmit("11010100", '0', '1', start_read, sda, scl_rising_pulse, scl_falling_pulse);
+        transmit("11010100", '0', '1', start_read, sda, scl_rising, scl_falling);
         check_equal(valid, '1');
         check_equal(ready, '1');
         check_equal(scl_stretch, '0');
         check_equal(read_data, std_logic_vector'("11010100"));
 
-        transmit("10000001", '1', '1', start_read, sda, scl_rising_pulse, scl_falling_pulse);
+        transmit("10000001", '1', '1', start_read, sda, scl_rising, scl_falling);
         check_equal(valid, '1');
         check_equal(ready, '0');
         check_equal(scl_stretch, '0');
@@ -185,7 +185,7 @@ begin  -- architecture a1
         check_equal(ready, '1');
         check_equal(scl_stretch, '0');
 
-        transmit("00000011", '0', '1', start_read, sda, scl_rising_pulse, scl_falling_pulse);
+        transmit("00000011", '0', '1', start_read, sda, scl_rising, scl_falling);
         check_equal(read_data, std_logic_vector'("00000011"));
         check_equal(valid, '1');
         check_equal(ready, '1');
@@ -201,5 +201,5 @@ begin  -- architecture a1
     test_runner_cleanup(runner);
   end process;
 
-  stability_check: check_stable(clk, one, scl_rising_pulse, scl_falling_pulse, sda_enable);
+  stability_check: check_stable(clk, one, scl_rising, scl_falling, sda_enable);
 end architecture a1;

@@ -19,10 +19,9 @@ architecture tb of address_detector_tb is
 
   signal rst_n : std_logic := '0';
 
-  signal scl_pulse : std_logic := '0';
-  signal scl_falling_pulse : std_logic := '0';
+  signal scl_rising : std_logic := '0';
+  signal scl_falling : std_logic := '0';
   signal sda : std_logic;
-  signal scl : std_logic := '0';
 
   signal start : std_logic;
 
@@ -46,8 +45,8 @@ begin  -- architecture tb
       clk_i                 => clk,
       rst_in                => rst_n,
       address_i             => address,
-      scl_pulse_i           => scl_pulse,
-      scl_falling_delayed_i => scl_falling_pulse,
+      scl_rising           => scl_rising,
+      scl_falling_delayed_i => scl_falling,
       sda_i                 => sda,
       sda_enable_o          => sda_enable,
       start_i               => start,
@@ -59,15 +58,15 @@ begin  -- architecture tb
   begin  -- process trigger_scl_pulse
     wait until rising_edge(clk);
     if trigger_scl_pulse = '1' then
-        scl_pulse <= '1';
-        scl_falling_pulse <= '0';
+        scl_rising <= '1';
+        scl_falling <= '0';
         wait until rising_edge(clk);
-        scl_pulse <= '0';
+        scl_rising <= '0';
         wait until rising_edge(clk);
         wait until rising_edge(clk);
-        scl_falling_pulse <= '1';
+        scl_falling <= '1';
         wait until rising_edge(clk);
-        scl_falling_pulse <= '0';
+        scl_falling <= '0';
         trigger_scl_pulse := '0';
 
         wait until rising_edge(clk);
@@ -468,5 +467,5 @@ begin  -- architecture tb
     test_runner_cleanup(runner);
   end process main;
 
-  stability_check: check_stable(clk, one, scl_pulse, scl_falling_pulse, sda_enable);
+  stability_check: check_stable(clk, one, scl_rising, scl_falling, sda_enable);
 end architecture tb;

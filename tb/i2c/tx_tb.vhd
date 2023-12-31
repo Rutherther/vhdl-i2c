@@ -22,7 +22,7 @@ architecture a1 of tx_tb is
   signal sda : std_logic;
   signal sda_override : std_logic := '0';
   signal sda_enable, scl : std_logic := '0';
-  signal scl_rising_pulse, scl_falling_pulse : std_logic := '0';
+  signal scl_rising, scl_falling : std_logic := '0';
 
   signal start_write : std_logic := '0';
   signal valid, ready : std_logic := '0';
@@ -42,24 +42,24 @@ architecture a1 of tx_tb is
 
   procedure trigger_scl_pulse(
     signal scl : inout std_logic;
-    signal scl_rising_pulse : inout std_logic;
-    signal scl_falling_pulse : inout std_logic) is
+    signal scl_rising : inout std_logic;
+    signal scl_falling : inout std_logic) is
   begin  -- procedure trigger_scl_pulse
-    scl_falling_pulse <= scl;
-    scl_rising_pulse <= '0';
+    scl_falling <= scl;
+    scl_rising <= '0';
     scl <= '0';
     wait until falling_edge(clk);
     scl <= '1';
-    scl_falling_pulse <= '0';
-    scl_rising_pulse <= '1';
+    scl_falling <= '0';
+    scl_rising <= '1';
     wait until falling_edge(clk);
-    scl_rising_pulse <= '0';
+    scl_rising <= '0';
     wait until falling_edge(clk);
     scl <= '0';
-    scl_falling_pulse <= '1';
+    scl_falling <= '1';
     wait until falling_edge(clk);
-    scl_rising_pulse <= '0';
-    scl_falling_pulse <= '0';
+    scl_rising <= '0';
+    scl_falling <= '0';
     wait until falling_edge(clk);
     wait until falling_edge(clk);
     wait until falling_edge(clk);
@@ -67,17 +67,17 @@ architecture a1 of tx_tb is
 
   procedure trigger_scl_rise(
     signal scl : inout std_logic;
-    signal scl_rising_pulse : inout std_logic;
-    signal scl_falling_pulse : inout std_logic) is
+    signal scl_rising : inout std_logic;
+    signal scl_falling : inout std_logic) is
   begin  -- procedure trigger_scl_pulse
     check_equal(scl, '0');
     wait until falling_edge(clk);
     scl <= '1';
-    scl_rising_pulse <= '1';
-    scl_falling_pulse <= '0';
+    scl_rising <= '1';
+    scl_falling <= '0';
     wait until falling_edge(clk);
-    scl_rising_pulse <= '0';
-    scl_falling_pulse <= '0';
+    scl_rising <= '0';
+    scl_falling <= '0';
   end procedure trigger_scl_rise;
 
   procedure check_received_data (
@@ -86,19 +86,19 @@ architecture a1 of tx_tb is
     constant trigger_ack : in std_logic;
     signal sda_override : inout std_logic;
     signal scl : inout std_logic;
-    signal scl_rising_pulse : inout std_logic;
-    signal scl_falling_pulse : inout std_logic) is
+    signal scl_rising : inout std_logic;
+    signal scl_falling : inout std_logic) is
   begin
     check(scl_stretch = '0', "Cannot send when stretch is active", failure);
     wait until falling_edge(clk);
 
     if scl = '1' then
       scl <= '0';
-      scl_falling_pulse <= '1';
-      scl_rising_pulse <= '0';
+      scl_falling <= '1';
+      scl_rising <= '0';
       wait until falling_edge(clk);
-      scl_falling_pulse <= '0';
-      scl_rising_pulse <= '0';
+      scl_falling <= '0';
+      scl_rising <= '0';
     end if;
 
     for i in 7 downto 0 loop
@@ -110,7 +110,7 @@ architecture a1 of tx_tb is
 
       check(scl_stretch = '0', "Cannot send when stretch is active", failure);
 
-      trigger_scl_pulse(scl, scl_rising_pulse, scl_falling_pulse);
+      trigger_scl_pulse(scl, scl_rising, scl_falling);
     end loop;  -- i
 
     -- ack
@@ -118,7 +118,7 @@ architecture a1 of tx_tb is
       sda_override <= '1';
     end if;
 
-    trigger_scl_pulse(scl, scl_rising_pulse, scl_falling_pulse);
+    trigger_scl_pulse(scl, scl_rising, scl_falling);
 
     if trigger_ack = '1' then
       sda_override <= '0';
@@ -135,8 +135,8 @@ begin  -- architecture a1
       clear_buffer_i        => '0',
       noack_o               => noack,
       scl_stretch_o         => scl_stretch,
-      scl_rising_pulse_i    => scl_rising_pulse,
-      scl_falling_delayed_i => scl_falling_pulse,
+      scl_rising_i    => scl_rising,
+      scl_falling_delayed_i => scl_falling,
       unexpected_sda_o      => unexpected_sda,
       sda_enable_o          => sda_enable,
       sda_i                 => sda,
@@ -181,7 +181,7 @@ begin  -- architecture a1
         start_write <= '1';
         wait until falling_edge(clk);
         valid <= '0';
-        check_received_data("11010100", '1', '1', sda_override, scl, scl_rising_pulse, scl_falling_pulse);
+        check_received_data("11010100", '1', '1', sda_override, scl, scl_rising, scl_falling);
         check_equal(sda_enable, '0');
       elsif run("twice") then
         valid <= '1';
@@ -195,9 +195,9 @@ begin  -- architecture a1
         valid <= '0';
         check_equal(ready, '0');
 
-        check_received_data("11010100", '0', '1', sda_override, scl, scl_rising_pulse, scl_falling_pulse);
+        check_received_data("11010100", '0', '1', sda_override, scl, scl_rising, scl_falling);
         wait until falling_edge(clk);
-        check_received_data("00101011", '1', '1', sda_override, scl, scl_rising_pulse, scl_falling_pulse);
+        check_received_data("00101011", '1', '1', sda_override, scl, scl_rising, scl_falling);
         check_equal(sda_enable, '0');
       elsif run("three") then
         valid <= '1';
@@ -211,15 +211,15 @@ begin  -- architecture a1
         valid <= '0';
         check_equal(ready, '0');
 
-        check_received_data("11010100", '0', '1', sda_override,  scl, scl_rising_pulse, scl_falling_pulse);
+        check_received_data("11010100", '0', '1', sda_override,  scl, scl_rising, scl_falling);
         wait until falling_edge(clk);
         check_equal(ready, '1');
         write_data <= "00001111";
         valid <= '1';
         wait until falling_edge(clk);
         valid <= '0';
-        check_received_data("00101011", '0', '1', sda_override,  scl, scl_rising_pulse, scl_falling_pulse);
-        check_received_data("00001111", '1', '1', sda_override,  scl, scl_rising_pulse, scl_falling_pulse);
+        check_received_data("00101011", '0', '1', sda_override,  scl, scl_rising, scl_falling);
+        check_received_data("00001111", '1', '1', sda_override,  scl, scl_rising, scl_falling);
         check_equal(sda_enable, '0');
       elsif run("stretching") then
         start_write <= '1';
@@ -235,7 +235,7 @@ begin  -- architecture a1
         wait until falling_edge(clk);
         valid <= '0';
         check_equal(scl_stretch, '0');
-        check_received_data("11001100", '1', '1', sda_override,  scl, scl_rising_pulse, scl_falling_pulse);
+        check_received_data("11001100", '1', '1', sda_override,  scl, scl_rising, scl_falling);
       elsif run("no_ack") then
         valid <= '1';
         write_data <= "11010100";
@@ -244,7 +244,7 @@ begin  -- architecture a1
         wait until falling_edge(clk);
         valid <= '0';
         check_noerr <= '0'; -- disable no err check
-        check_received_data("11010100", '1', '0', sda_override, scl, scl_rising_pulse, scl_falling_pulse);
+        check_received_data("11010100", '1', '0', sda_override, scl, scl_rising, scl_falling);
         check_equal(curr_noack, '1');
         check_equal(sda_enable, '0');
       end if;
@@ -255,5 +255,5 @@ begin  -- architecture a1
 
   no_noack_err: check_stable(clk, check_noerr, check_noerr, zero, noack);
   no_sda_unexpected_err: check_stable(clk, check_noerr, check_noerr, zero, unexpected_sda);
-  stability_check: check_stable(clk, validate_sda_stable_when_scl_high, scl_rising_pulse, scl_falling_pulse, sda_enable);
+  stability_check: check_stable(clk, validate_sda_stable_when_scl_high, scl_rising, scl_falling, sda_enable);
 end architecture a1;

@@ -50,7 +50,7 @@ end entity slave;
 architecture a1 of slave is
   signal sync_sda, sync_scl                  : std_logic;
   signal start_condition, stop_condition     : std_logic;
-  signal scl_rising_pulse, scl_falling_pulse : std_logic;
+  signal scl_rising, scl_falling : std_logic;
 
   signal transmitting, receiving : std_logic;
 
@@ -94,15 +94,15 @@ begin  -- architecture a1
     port map (
       clk_i    => clk_i,
       rst_in   => rst_in,
-      signal_i => scl_falling_pulse,
+      signal_i => scl_falling,
       signal_o => scl_falling_delayed);
 
   scl_edge_detector: entity utils.sync_edge_detector
     port map (
       clk_i          => clk_i,
       signal_i       => sync_scl,
-      rising_edge_o  => scl_rising_pulse,
-      falling_edge_o => scl_falling_pulse);
+      rising_edge_o  => scl_rising,
+      falling_edge_o => scl_falling);
 
   sda_sync: entity utils.metastability_filter
     port map (
@@ -132,7 +132,7 @@ begin  -- architecture a1
       start_read_i          => receiving,
       generate_ack_i        => generate_ack_i,
       rst_i2c_i             => rst_i2c,
-      scl_pulse_i           => scl_rising_pulse,
+      scl_rising           => scl_rising,
       scl_falling_delayed_i => scl_falling_delayed,
       scl_stretch_o         => rx_scl_stretch,
       sda_i                 => sda_i,
@@ -150,7 +150,7 @@ begin  -- architecture a1
       clear_buffer_i        => tx_clear_buffer_i,
       start_write_i         => transmitting,
       rst_i2c_i             => rst_i2c,
-      scl_rising_pulse_i    => scl_rising_pulse,
+      scl_rising_i    => scl_rising,
       scl_falling_delayed_i => scl_falling_delayed,
       scl_stretch_o         => tx_scl_stretch,
       sda_i                 => sda_i,
@@ -166,7 +166,7 @@ begin  -- architecture a1
       clk_i                 => clk_i,
       rst_in                => rst_in,
       address_i             => address_i,
-      scl_pulse_i           => scl_rising_pulse,
+      scl_rising           => scl_rising,
       scl_falling_delayed_i => scl_falling_delayed,
       sda_enable_o          => address_detect_sda_enable,
       sda_i                 => sync_sda,

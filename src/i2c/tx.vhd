@@ -1,6 +1,6 @@
 
 -- i2c interface
-    -- scl_pulse_i
+    -- scl_rising
     -- scl_stretch_o
     -- sda_o
 
@@ -30,7 +30,7 @@ entity tx is
     unexpected_sda_o    : out std_logic;
     noack_o             : out std_logic;
 
-    scl_rising_pulse_i  : in  std_logic;
+    scl_rising_i  : in  std_logic;
     scl_falling_delayed_i : in  std_logic;
 
     scl_stretch_o       : out std_logic;
@@ -80,14 +80,14 @@ begin  -- architecture a1
   scl_stretch_o <= '1' when curr_state = WAITING_FOR_DATA else '0';
   ready_o <= ready;
   sda_enable_o <= not tx_buffer(8) when curr_state = SENDING else '0';
-  unexpected_sda_o <= '1' when curr_state = SENDING and sda_i /= tx_buffer(8) and scl_rising_pulse_i = '1' else '0';
-  noack_o <= '1' when curr_state = ACK and sda_i = '1' and scl_rising_pulse_i = '1' else '0';
+  unexpected_sda_o <= '1' when curr_state = SENDING and sda_i /= tx_buffer(8) and scl_rising_i = '1' else '0';
+  noack_o <= '1' when curr_state = ACK and sda_i = '1' and scl_rising_i = '1' else '0';
 
   ready <= '0' when curr_tx_buffers_filled(curr_saving_buffer_index) = '1' or curr_err_noack = '1' else '1';
   tx_buffer <= curr_tx_buffers(curr_tx_buffer_index);
   tx_buffer_filled <= curr_tx_buffers_filled(curr_tx_buffer_index);
 
-  next_scl <= '1' when scl_rising_pulse_i = '1' else
+  next_scl <= '1' when scl_rising_i = '1' else
               '0' when scl_falling_delayed_i = '1' else
               curr_scl;
 
@@ -142,7 +142,7 @@ begin  -- architecture a1
         next_state <= ACK;
       end if;
     elsif curr_state = ACK then
-      if scl_rising_pulse_i = '1' then
+      if scl_rising_i = '1' then
         if start_write_i = '1' then
           override_tx_buffer_filled := curr_tx_buffers_filled(next_tx_buffer_index);
           start_sending := '1';
@@ -159,7 +159,7 @@ begin  -- architecture a1
     if start_sending = '1' then
       if override_tx_buffer_filled = '0' and valid_i = '0' then
         next_state <= WAITING_FOR_DATA;
-      elsif curr_scl = '0' and scl_rising_pulse_i = '0' then
+      elsif curr_scl = '0' and scl_rising_i = '0' then
         next_state <= SENDING;
       else
         next_state <= WAITING_FOR_FALLING_EDGE;

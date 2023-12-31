@@ -9,7 +9,7 @@ entity address_detector is
     clk_i       : in  std_logic;        -- Input clock
     rst_in      : in  std_logic;        -- Reset the detection
     address_i   : in  std_logic_vector(6 downto 0);
-    scl_pulse_i : in  std_logic;
+    scl_rising : in  std_logic;
     scl_falling_delayed_i : in  std_logic;
     sda_enable_o : out std_logic;
     sda_i      : in  std_logic;   -- The data that could contain the address
@@ -42,14 +42,14 @@ begin  -- architecture a1
   success_o <= '1' when curr_state = MATCH else '0';
   rw_o <= curr_read_rw when curr_state = MATCH else '0';
 
-  next_read_rw <= sda_i when scl_pulse_i = '1' and curr_index = 7 else
+  next_read_rw <= sda_i when scl_rising = '1' and curr_index = 7 else
                   curr_read_rw;
 
-  next_index <= (curr_index + 1) when curr_state = CHECKING and scl_pulse_i = '1' and curr_index < 7 else
+  next_index <= (curr_index + 1) when curr_state = CHECKING and scl_rising = '1' and curr_index < 7 else
                 curr_index when curr_state = CHECKING else
                 0;
 
-  mismatch <= '1' when curr_index <= 6 and address_i(6 - curr_index) /= sda_i and scl_pulse_i = '1' else '0';
+  mismatch <= '1' when curr_index <= 6 and address_i(6 - curr_index) /= sda_i and scl_rising = '1' else '0';
 
   sda_enable_o <= '1' when curr_state = ACK_ON else '0';
 
@@ -64,7 +64,7 @@ begin  -- architecture a1
     if curr_state = CHECKING then
       if mismatch = '1' then
         next_state <= FAIL;
-      elsif curr_index = 7 and scl_pulse_i = '1' then
+      elsif curr_index = 7 and scl_rising = '1' then
         next_state <= ACK;
       end if;
     end if;

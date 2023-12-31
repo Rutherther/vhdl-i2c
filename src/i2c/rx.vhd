@@ -1,5 +1,5 @@
 -- i2c interface
-    -- scl_pulse_i
+    -- scl_rising
     -- scl_stretch_o
     -- sda_o
 
@@ -26,7 +26,7 @@ entity rx is
     start_read_i   : in  std_logic;     -- Start reading with next scl_pulse
     rst_i2c_i      : in  std_logic;     -- Reset rx circuitry
 
-    scl_pulse_i    : in  std_logic;     -- SCL rising edge pulse
+    scl_rising    : in  std_logic;     -- SCL rising edge pulse
     scl_falling_delayed_i    : in  std_logic;     -- SCL rising edge pulse
     scl_stretch_o  : out std_logic;     -- Stretch SCL (keep SCL 0)
     sda_i          : in  std_logic;     -- SDA data line state
@@ -96,7 +96,7 @@ begin  -- architecture a1
         start_receive := '1';
       end if;
     elsif curr_state = RECEIVING then
-      if curr_rx_buffer(7) = '1' and scl_pulse_i = '1' then
+      if curr_rx_buffer(7) = '1' and scl_rising = '1' then
         next_state <= ACK;
       end if;
     elsif curr_state = ACK then
@@ -132,7 +132,7 @@ begin  -- architecture a1
 
   curr_receiving <= '1' when curr_state = RECEIVING else '0';
 
-  next_saving <= '1' when curr_rx_buffer(7) = '1' and scl_pulse_i = '1' and curr_state = RECEIVING else
+  next_saving <= '1' when curr_rx_buffer(7) = '1' and scl_rising = '1' and curr_state = RECEIVING else
                  '1' when curr_saving = '1' and curr_read_data_filled = '1' and confirm_read_i = '0' else
                  '0';
 
@@ -149,7 +149,7 @@ begin  -- architecture a1
                            '1' when curr_saving = '1' else
                            '0';
 
-  next_rx_buffer <= curr_rx_buffer(6 downto 0) & sda_i when curr_receiving = '1' and scl_pulse_i = '1' else
+  next_rx_buffer <= curr_rx_buffer(6 downto 0) & sda_i when curr_receiving = '1' and scl_rising = '1' else
                     curr_rx_buffer when curr_receiving = '1' else
                     curr_rx_buffer when curr_saving = '1' and confirm_read_i = '0' else
                     "00000001";
