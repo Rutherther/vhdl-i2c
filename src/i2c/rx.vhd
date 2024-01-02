@@ -31,6 +31,7 @@ entity rx is
     scl_stretch_o  : out std_logic;     -- Stretch SCL (keep SCL 0)
     sda_i          : in  std_logic;     -- SDA data line state
     sda_enable_o   : out std_logic;     -- SDA data line state
+    done_o         : out std_logic;
 
     generate_ack_i : in std_logic;
 
@@ -77,6 +78,8 @@ architecture a1 of rx is
 begin  -- architecture a1
   read_ready_o <= '1' when curr_saving = '0' or curr_read_data_filled = '0' or confirm_read_i = '1' else
                   '0';
+
+  done_o <= '1' when curr_state = ACK_ON and scl_falling_delayed_i = '1' else '0';
 
   scl_stretch_o <= '1' when curr_state = STRETCHING else '0';
 

@@ -26,6 +26,7 @@ entity tx is
     start_write_i       : in  std_logic;
     rst_i2c_i           : in  std_logic;    -- Reset rx circuitry
     clear_buffer_i      : in  std_logic;
+    done_o         : out std_logic;
 
     unexpected_sda_o    : out std_logic;
     noack_o             : out std_logic;
@@ -66,14 +67,14 @@ architecture a1 of tx is
   signal curr_tx_buffers_filled : std_logic_vector(1 downto 0);
   signal next_tx_buffers_filled : std_logic_vector(1 downto 0);
 
+  signal curr_done : std_logic;
+  signal next_done : std_logic;
+
   signal tx_buffer : std_logic_vector(8 downto 0);
   signal tx_buffer_filled : std_logic;
 
   signal curr_scl : std_logic;
   signal next_scl : std_logic;
-
-  signal curr_err_noack : std_logic;
-  signal next_err_noack : std_logic;
 
   signal ready : std_logic;
 begin  -- architecture a1
@@ -83,7 +84,7 @@ begin  -- architecture a1
   unexpected_sda_o <= '1' when curr_state = SENDING and sda_i /= tx_buffer(8) and scl_rising_i = '1' else '0';
   noack_o <= '1' when curr_state = ACK and sda_i = '1' and scl_rising_i = '1' else '0';
 
-  ready <= '0' when curr_tx_buffers_filled(curr_saving_buffer_index) = '1' or curr_err_noack = '1' else '1';
+  ready <= '0' when curr_tx_buffers_filled(curr_saving_buffer_index) = '1' else '1';
   tx_buffer <= curr_tx_buffers(curr_tx_buffer_index);
   tx_buffer_filled <= curr_tx_buffers_filled(curr_tx_buffer_index);
 
@@ -96,6 +97,11 @@ begin  -- architecture a1
 
   next_saving_buffer_index <= (curr_saving_buffer_index + 1) mod 2 when ready = '1' and valid_i = '1' else
                               curr_saving_buffer_index;
+
+  done_o <= curr_done and not next_done;
+  next_done <= '1' when curr_state = ACK and next_state /= ACK else
+               '1' when curr_done = '1' and scl_falling_delayed_i = '0' else
+               '0';
 
   set_next_tx_buffers: process(all) is
   begin  -- process set_next_tx_buffer
