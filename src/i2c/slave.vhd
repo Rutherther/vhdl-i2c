@@ -38,6 +38,7 @@ entity slave is
     rw_o         : out std_logic;       -- 1 - read, 0 - write
     dev_busy_o   : out std_logic;       -- Communicating with master
     bus_busy_o   : out std_logic;       -- Bus is busy, someone else is communicating
+    waiting_o    : out std_logic;       -- Waiting for data or read data
 
     sda_i        : in std_logic;        -- I2C SDA line
     scl_i        : in std_logic;        -- I2C SCL line
@@ -78,6 +79,7 @@ begin  -- architecture a1
   rw_o <= rw;
   dev_busy_o <= transmitting or receiving;
   bus_busy_o <= bus_busy;
+  waiting_o <= tx_scl_stretch or rx_scl_stretch;
 
   scl_enable_o <= tx_scl_stretch when transmitting = '1' and tx_stretch_i = '1' and scl_i = '0' else
                   rx_scl_stretch when receiving = '1' and rx_stretch_i = '1' and scl_i = '0' else
