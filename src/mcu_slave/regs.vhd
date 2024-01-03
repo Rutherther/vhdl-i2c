@@ -30,6 +30,7 @@ architecture a1 of regs is
   signal next_regs : regs_t;
 
   signal rst_n : std_logic;
+  signal rst_sync : std_logic;
 
   signal sda, scl : std_logic;
   signal sda_enable, scl_enable : std_logic;
@@ -53,8 +54,15 @@ architecture a1 of regs is
 
   signal rw : std_logic;
 begin
-  rst_n <= not rst_i;
-  rst_on <= not rst_i;
+  rst_n <= not rst_sync;
+  rst_on <= rst_n;
+
+  sync_reset: entity utils.metastability_filter
+    port map (
+      clk_i    => clk_i,
+      signal_i => rst_i,
+      signal_o => rst_sync);
+
   dev_busy_o <= dev_busy;
 
   next_dev_busy <= dev_busy;

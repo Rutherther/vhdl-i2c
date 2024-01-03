@@ -56,7 +56,7 @@ begin  -- architecture tb
   not_scl <= not scl;
 
   clk <= not clk after CLK_PERIOD / 2;
-  rst_n <= '1' after 2 * CLK_PERIOD;
+  rst_n <= '1' after 6 * CLK_PERIOD;
   rst <= not rst_n;
 
   -- TODO: allow conditions from master...

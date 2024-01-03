@@ -31,6 +31,7 @@ architecture a1 of counter is
   signal go_next : std_logic;
 
   signal rst_n : std_logic;
+  signal rst_sync : std_logic;
 
   signal sda, scl : std_logic;
   signal sda_enable, scl_enable : std_logic;
@@ -38,8 +39,14 @@ architecture a1 of counter is
   signal tx_valid, tx_ready : std_logic;
   signal tx_data : std_logic_vector(7 downto 0);
 begin
-  rst_n <= not rst_i;
+  rst_n <= not rst_sync;
   rst_on <= rst_n;
+
+  sync_reset: entity utils.metastability_filter
+    port map (
+      clk_i    => clk_i,
+      signal_i => rst_i,
+      signal_o => rst_sync);
 
   next_count <= (curr_count + 1) mod MAX when go_next = '1' else
                 curr_count;
