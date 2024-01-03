@@ -64,6 +64,7 @@ begin  -- architecture tb
   main: process is
   begin  -- process main
     wait until rst_n = '1';
+    wait for 2 * CLK_PERIOD;
     wait until falling_edge(clk);
     test_runner_setup(runner, runner_cfg);
 
