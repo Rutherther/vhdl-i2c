@@ -23,5 +23,7 @@ i2c_lib = vu.add_library('i2c')
 i2c_lib.add_source_files(Path(__file__).parent / 'src/**/*.vhd')
 
 vu.add_compile_option('nvc.a_flags', ['--relaxed'])
+vu.add_compile_option('ghdl.a_flags', ['-frelaxed'])
+vu.set_sim_option('ghdl.elab_flags', ['-frelaxed'])
 
 vu.main()
