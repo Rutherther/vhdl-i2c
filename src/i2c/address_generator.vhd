@@ -17,7 +17,7 @@ entity address_generator is
     scl_rising_i          : in  std_logic;
     scl_falling_delayed_i : in  std_logic;
     sda_enable_o          : out std_logic;  -- Data of the address to send.
-    sda_i                 : out std_logic;
+    sda_i                 : in  std_logic;
     noack_o               : out std_logic;
     unexpected_sda_o      : out std_logic;
     done_o                : out std_logic);
@@ -43,7 +43,7 @@ begin  -- architecture a1
                 curr_index + 1 when curr_index < 8 and scl_falling_delayed_i = '1' and curr_state = GEN else
                 curr_index;
 
-  unexpected_sda_o <= '1' when curr_state = GEN and sda_i /= address_i(6 - curr_index) and scl_rising_i = '1' else '0';
+  unexpected_sda_o <= '1' when curr_state = GEN and curr_index <= 6 and sda_i /= address_i(6 - curr_index) and scl_rising_i = '1' else '0';
   noack_o <= '1' when curr_state = ACK and scl_rising_i = '1' and sda_i = '1' else '0';
   done_o <= '1' when curr_state = DONE else '0';
 
@@ -58,9 +58,6 @@ begin  -- architecture a1
     start_gen := '0';
 
     if curr_state = IDLE then
-      if start_i = '1' then
-        start_gen := '1';
-      end if;
     elsif curr_state = WAITING_FOR_FALLING then
       if scl_falling_delayed_i = '1' then
         next_state <= GEN;
@@ -71,6 +68,10 @@ begin  -- architecture a1
       end if;
     elsif curr_state = ACK and scl_rising_i = '1' then
       next_state <= DONE;
+    end if;
+
+    if start_i = '1' then
+      start_gen := '1';
     end if;
 
     if start_gen = '1' then
