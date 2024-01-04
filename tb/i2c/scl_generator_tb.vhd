@@ -161,7 +161,7 @@ begin  -- architecture tb
 
           stable_cannot_comply <= '0';
           wait_delay(1);
-          check_equal(cannot_comply, '1');
+          check_equal(cannot_comply, '1', "Wrong cannot comply");
         elsif run("falling_rising_scl_low") then
           req_falling;
           wait_delay(DELAY);
@@ -170,7 +170,7 @@ begin  -- architecture tb
 
           stable_cannot_comply <= '0';
           wait_delay(DELAY);
-          check_equal(cannot_comply, '1');
+          check_equal(cannot_comply, '1', "Wrong cannot comply");
           check_equal(scl_enable, '0');
           wait_delay(DELAY);
           check_equal(scl_enable, '0');

@@ -41,6 +41,24 @@ package tb_i2c_pkg is
     constant exp_data : in std_logic_vector(7 downto 0);
     signal rx_confirm_read : inout std_logic);
 
+  procedure wait_for_start_condition (
+    constant timeout : in time;
+    signal scl       : in std_logic;
+    signal sda       : in std_logic);
+
+  procedure wait_for_stop_condition (
+    constant timeout : in time;
+    signal scl       : in std_logic;
+    signal sda       : in std_logic);
+
+  procedure wait_for_scl_rise (
+    constant timeout : in time;
+    signal scl       : in std_logic);
+
+  procedure wait_for_scl_fall (
+    constant timeout : in time;
+    signal scl       : in std_logic);
+
 end package tb_i2c_pkg;
 
 package body tb_i2c_pkg is
@@ -127,5 +145,43 @@ package body tb_i2c_pkg is
     wait until falling_edge(clk);
     rx_confirm_read <= '0';
   end procedure rx_read_data;
+
+  procedure wait_for_start_condition (
+    constant timeout : in time;
+    signal scl       : in std_logic;
+    signal sda       : in std_logic) is
+  begin
+    wait until falling_edge(sda) and scl = 'H' for timeout;
+    check(sda = '0' and scl = 'H', "Did not get start condition in time.");
+  end procedure wait_for_start_condition;
+
+  procedure wait_for_stop_condition (
+    constant timeout : in time;
+    signal scl       : in std_logic;
+    signal sda       : in std_logic) is
+  begin
+    wait until rising_edge(sda) and scl = 'H' for timeout;
+    check(sda = '1' and scl = 'H', "Did not get stop condition in time.");
+  end procedure wait_for_stop_condition;
+
+  procedure wait_for_scl_rise (
+    constant timeout : in time;
+    signal scl       : in std_logic) is
+  begin
+    wait until scl = 'H' for timeout;
+    check_equal(scl, 'H', "Did not get rising scl in time.");
+    wait until falling_edge(clk);
+  end procedure wait_for_scl_rise;
+
+
+  procedure wait_for_scl_fall (
+    constant timeout : in time;
+    signal scl       : in std_logic) is
+  begin
+    wait until scl = '0' for timeout;
+    check_equal(scl, '0', "Did not get falling scl in time.");
+    wait until falling_edge(clk);
+  end procedure wait_for_scl_fall;
+
 
 end package body tb_i2c_pkg;
