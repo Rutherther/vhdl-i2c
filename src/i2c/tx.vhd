@@ -78,7 +78,7 @@ architecture a1 of tx is
 
   signal ready : std_logic;
 begin  -- architecture a1
-  scl_stretch_o <= '1' when curr_state = WAITING_FOR_DATA else '0';
+  scl_stretch_o <= '1' when curr_state = WAITING_FOR_DATA and curr_done = '0' else '0';
   ready_o <= ready;
   sda_enable_o <= not tx_buffer(8) when curr_state = SENDING else '0';
   unexpected_sda_o <= '1' when curr_state = SENDING and sda_i /= tx_buffer(8) and scl_rising_i = '1' else '0';
@@ -184,9 +184,11 @@ begin  -- architecture a1
         curr_tx_buffers_filled <= "00";
         curr_saving_buffer_index <= 0;
         curr_scl <= '1';                -- assume 1 (the default, no one transmitting)
+        curr_done <= next_done;
       elsif rst_i2c_i = '1' then
         curr_state <= IDLE;
         curr_scl <= '1';                -- assume 1 (the default, no one transmitting)
+        curr_done <= '0';
       else
         curr_state <= next_state;
         curr_tx_buffers <= next_tx_buffers;
@@ -194,6 +196,7 @@ begin  -- architecture a1
         curr_tx_buffers_filled <= next_tx_buffers_filled;
         curr_saving_buffer_index <= next_saving_buffer_index;
         curr_scl <= next_scl;
+        curr_done <= next_done;
       end if;
     end if;
   end process set_regs;

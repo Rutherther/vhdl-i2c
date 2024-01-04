@@ -69,14 +69,12 @@ package body tb_i2c_slave_pkg is
     constant exp_ack     : in    std_logic := '1') is
 
   begin  -- procedure transmit
-    report "Start slave transmit";
     if scl = 'H' then
         wait_for_scl_fall(scl_timeout, scl);
     end if;
 
     -- data
     for i in 7 downto 0 loop
-    report "Data " & integer'image(i) & " scl is: " & std_logic'image(scl);
       wait until falling_edge(clk);
       sda <= '0' when data(i) = '0' else 'Z';
       wait_for_scl_rise(scl_timeout, scl);
@@ -87,7 +85,6 @@ package body tb_i2c_slave_pkg is
     sda <= 'Z';
     wait_for_scl_rise(scl_timeout, scl);
 
-    report "Ack slave transmit";
     if exp_ack = '1' then
       check_equal(sda, '0', "No acknowledge");
     elsif exp_ack = '0' then

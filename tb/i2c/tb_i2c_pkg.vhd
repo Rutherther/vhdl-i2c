@@ -161,14 +161,14 @@ package body tb_i2c_pkg is
     signal sda       : in std_logic) is
   begin
     wait until rising_edge(sda) and scl = 'H' for timeout;
-    check(sda = '1' and scl = 'H', "Did not get stop condition in time.");
+    check(sda = 'H' and scl = 'H', "Did not get stop condition in time.");
   end procedure wait_for_stop_condition;
 
   procedure wait_for_scl_rise (
     constant timeout : in time;
     signal scl       : in std_logic) is
   begin
-    wait until scl = 'H' for timeout;
+    wait until rising_edge(scl) for timeout;
     check_equal(scl, 'H', "Did not get rising scl in time.");
     wait until falling_edge(clk);
   end procedure wait_for_scl_rise;
@@ -178,7 +178,7 @@ package body tb_i2c_pkg is
     constant timeout : in time;
     signal scl       : in std_logic) is
   begin
-    wait until scl = '0' for timeout;
+    wait until falling_edge(scl) for timeout;
     check_equal(scl, '0', "Did not get falling scl in time.");
     wait until falling_edge(clk);
   end procedure wait_for_scl_fall;

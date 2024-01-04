@@ -35,7 +35,7 @@ entity master is
     stop_i              : in  std_logic;
     start_i             : in  std_logic;
     run_i               : in  std_logic;
-    rw_o                : out std_logic;  -- 1 - read, 0 - write
+    rw_i                : in  std_logic;  -- 1 - read, 0 - write
     dev_busy_o          : out std_logic;  -- Communicating with master
     bus_busy_o          : out std_logic;  -- Bus is busy, someone else is communicating
     waiting_o           : out std_logic;  -- Waiting for data or read data
@@ -84,14 +84,12 @@ architecture a1 of master is
   signal scl_gen_scl_enable : std_logic;
   signal scl_gen_req_continuous : std_logic;
 
-  signal rw : std_logic;
   signal rst_i2c : std_logic;
 
   signal scl_falling_delayed : std_logic;
   signal waiting_for_data : std_logic;
   signal scl_gen_falling : std_logic;
 begin  -- architecture a1
-  rw_o <= rw;
   dev_busy_o <= transmitting or receiving;
   bus_busy_o <= bus_busy;
   waiting_for_data <= tx_scl_stretch or rx_scl_stretch;
@@ -232,7 +230,7 @@ begin  -- architecture a1
       unexpected_sda_o      => adr_unexpected_sda,
       done_o                => adr_done,
       start_i               => adr_gen_start,
-      rw_i                  => rw);
+      rw_i                  => rw_i);
 
   state_machine : entity work.master_state
     port map (
@@ -243,7 +241,7 @@ begin  -- architecture a1
       start_i                  => start_i,
       stop_i                   => stop_i,
       run_i                    => run_i,
-      rw_i                     => rw,
+      rw_i                     => rw_i,
 --
       expect_ack_i             => expect_ack_i,
       noack_address_i          => adr_noack,

@@ -177,7 +177,7 @@ begin  -- architecture a1
       elsif address_gen_done_i = '1' then
         if any_err = '1' then
           next_state <= GENERATING_STOP;
-        elsif rw_i = '1' then
+        elsif rw_i = '0' then
           next_state <= TRANSMITTING;
         else
           next_state <= RECEIVING;

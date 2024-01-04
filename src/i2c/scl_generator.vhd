@@ -53,8 +53,8 @@ begin  -- architecture a1
 
   scl_changing <= scl_rising_i or scl_falling_i;
 
-  should_rise <= (gen_rising_i or gen_continuous_i and not gen_falling_i) and not curr_scl;
-  should_fall <= (gen_falling_i or gen_continuous_i and not gen_rising_i) and curr_scl;
+  should_rise <= (gen_rising_i or gen_continuous_i) and not gen_falling_i and not curr_scl;
+  should_fall <= (gen_falling_i or gen_continuous_i) and not gen_rising_i and curr_scl;
   should_change <= should_rise or should_fall;
   can_change <= '1' when curr_stable_count = MIN_STABLE_CYCLES else '0';
 
