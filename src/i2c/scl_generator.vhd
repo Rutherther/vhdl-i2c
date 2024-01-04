@@ -9,9 +9,11 @@ entity scl_generator is
   port (
     clk_i            : in  std_logic;
     rst_in           : in  std_logic;
+
     scl_i            : in  std_logic;
     scl_rising_i     : in  std_logic;
     scl_falling_i    : in  std_logic;
+
     gen_continuous_i : in  std_logic;
     gen_rising_i     : in  std_logic;
     gen_falling_i    : in  std_logic;
@@ -42,7 +44,7 @@ architecture a1 of scl_generator is
 begin  -- architecture a1
   scl_enable_o <= curr_scl_enable;
 
-  cannot_comply_o <= (scl_i xor exp_scl) and should_change;
+  cannot_comply_o <= (scl_i xor (not curr_scl_enable)) and should_change;
 
   should_rise <= (gen_rising_i or gen_continuous_i) and not scl_i;
   should_fall <= (gen_falling_i or gen_continuous_i) and scl_i;
@@ -53,9 +55,8 @@ begin  -- architecture a1
   req_change <= can_change and should_change;
   change <= req_change and (scl_i xor exp_scl);
 
-  -- TODO check
   exp_scl <= '1' when should_rise = '1' and req_change = '1' else
-             '0' when should_fall = '0' and req_change = '1' else
+             '0' when should_fall = '1' and req_change = '1' else
              not curr_scl_enable;
 
   next_scl_enable <= curr_scl_enable xor change;
@@ -63,7 +64,7 @@ begin  -- architecture a1
   scl_changing <= scl_rising_i or scl_falling_i;
 
   next_stable_count <=  0 when scl_changing = '1' else
-                        curr_stable_count + 1 when can_change = '0' else
+                        curr_stable_count + 1 when can_change = '0' and curr_stable_count < MIN_STABLE_CYCLES else
                         curr_stable_count;
 
   set_regs: process (clk_i) is
@@ -73,7 +74,7 @@ begin  -- architecture a1
         curr_stable_count <= 0;
         curr_scl_enable <= '0';
       else
-        curr_stable_count <= curr_stable_count;
+        curr_stable_count <= next_stable_count;
         curr_scl_enable <= next_scl_enable;
       end if;
     end if;
