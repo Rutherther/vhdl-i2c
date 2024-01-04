@@ -65,8 +65,8 @@ begin  -- architecture a1
   req_scl_rise_o <= '1' when curr_state = REQ_SCL_RISE else '0';
   req_scl_fall_o <= '1' when curr_state = REQ_SCL_FALL or curr_state = PREREQ_SCL_FALL else '0';
 
-  sda_enable_o <= not request_sda when curr_state = PREPARE_SDA or curr_state = REQ_SCL_RISE else
-                  request_sda when curr_state = GEN_COND or curr_state = REQ_SCL_FALL else
+  sda_enable_o <= request_sda when curr_state = PREPARE_SDA or curr_state = REQ_SCL_RISE else
+                  not request_sda when curr_state = GEN_COND or curr_state = REQ_SCL_FALL else
                   '0';
 
   next_scl <= '1' when scl_rising_i = '1' else
@@ -100,7 +100,7 @@ begin  -- architecture a1
       if scl_falling_i = '1' then
         next_count_en <= '1';
       elsif curr_count = DELAY then
-        next_state <= DONE;
+        next_state <= PREPARE_SDA;
         next_count_en <= '0';
       end if;
     elsif curr_state = PREPARE_SDA then
@@ -127,7 +127,11 @@ begin  -- architecture a1
       if start_condition_i = '1' or stop_condition_i = '1' then
         next_count_en <= '1';
       elsif curr_count = DELAY then
-        next_state <= REQ_SCL_FALL;
+        if gen_start_i = '1' then
+          next_state <= REQ_SCL_FALL;
+        else
+          next_state <= DONE;
+        end if;
         next_count_en <= '0';
       end if;
     elsif curr_state = REQ_SCL_FALL then
@@ -152,7 +156,9 @@ begin  -- architecture a1
         curr_state <= IDLE;
         curr_count <= 0;
         curr_count_en <= '0';
+        curr_scl <= '1';
       else
+        curr_scl <= next_scl;
         curr_state <= next_state;
         curr_count <= next_count;
         curr_count_en <= next_count_en;
