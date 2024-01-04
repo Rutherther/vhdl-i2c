@@ -30,7 +30,6 @@ architecture a1 of scl_generator is
   signal can_change : std_logic;
 
   signal req_change : std_logic;
-  signal change : std_logic;
 
   signal scl_changing : std_logic;
 
@@ -52,14 +51,13 @@ begin  -- architecture a1
   can_change <= '1' when curr_stable_count = MIN_STABLE_CYCLES else '0';
 
   -- requests a change of the SCL, not of SCL enable
-  req_change <= can_change and should_change;
-  change <= req_change and (scl_i xor exp_scl);
+  req_change <= '1' when (can_change and should_change) = '1' and next_stable_count /= 0 else '0';
 
   exp_scl <= '1' when should_rise = '1' and req_change = '1' else
              '0' when should_fall = '1' and req_change = '1' else
              not curr_scl_enable;
 
-  next_scl_enable <= curr_scl_enable xor change;
+  next_scl_enable <= not exp_scl;
 
   scl_changing <= scl_rising_i or scl_falling_i;
 

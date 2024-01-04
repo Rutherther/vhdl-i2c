@@ -134,6 +134,27 @@ begin  -- architecture tb
           for i in 0 to 10 loop
             check_equal(scl, 'H');
           end loop;  -- i
+        elsif run("continuous_rising") then
+          req_continuous;
+          for i in 0 to 5 loop
+            wait_delay(DELAY - 1);
+            report "Hi" & std_logic'image(scl);
+          end loop;  -- i
+
+          check_equal(scl, '0');
+          req_rising;
+          wait_delay(DELAY);
+          check_equal(scl, 'H');
+        elsif run("continuous_falling") then
+          req_continuous;
+          for i in 0 to 6 loop
+            wait_delay(DELAY - 1);
+          end loop;  -- i
+
+          check_equal(scl, 'H');
+          req_falling;
+          wait_delay(DELAY);
+          check_equal(scl, '0');
         elsif run("rising_scl_low") then
           scl <= '0'; -- pull down
           req_rising;
@@ -151,6 +172,8 @@ begin  -- architecture tb
           wait_delay(DELAY);
           check_equal(cannot_comply, '1');
           check_equal(scl_enable, '0');
+          wait_delay(DELAY);
+          check_equal(scl_enable, '0');
         end if;
     end loop;
 
@@ -161,6 +184,7 @@ begin  -- architecture tb
   begin  -- process scl_rising
     wait until rising_edge(scl);
     scl_rising <= '1';
+    wait until rising_edge(clk);
     wait until falling_edge(clk);
     scl_rising <= '0';
   end process set_scl_rising;
@@ -169,6 +193,7 @@ begin  -- architecture tb
   begin  -- process scl_rising
     wait until falling_edge(scl);
     scl_falling <= '1';
+    wait until rising_edge(clk);
     wait until falling_edge(clk);
     scl_falling <= '0';
   end process set_scl_falling;
