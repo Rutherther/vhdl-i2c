@@ -32,7 +32,7 @@ entity master_state is
     tx_done_i                : in std_logic;
 -- data for address_generator
     address_gen_start_o      : out std_logic;
-    address_gen_done_i       : out std_logic;
+    address_gen_done_i       : in  std_logic;
 -- data for cond generator
     req_start_o              : out std_logic;
     req_stop_o               : out std_logic;
@@ -116,12 +116,12 @@ begin  -- architecture a1
 
   rst_i2c_o <= any_err;
 
-  next_gen_start_req <= '1' when start_i = '1' else
-                        '0' when next_state = GENERATING_START else
+  next_gen_start_req <= '1' when start_i = '1' and run_i = '1' else
+                        '0' when curr_state = GENERATING_START else
                         curr_gen_start_req;
 
   next_gen_stop_req <= '1' when stop_i = '1' else
-                        '0' when next_state = GENERATING_STOP else
+                        '0' when curr_state = GENERATING_STOP else
                         curr_gen_stop_req;
 
   next_err_general <= '0' when start_condition_i = '1' else
@@ -220,10 +220,6 @@ begin  -- architecture a1
         next_state <= GENERATING_STOP;
       end if;
     end if;
-
-    if run_i = '0' then
-      next_state <= IDLE;
-    end if;
   end process set_next_state;
 
   set_regs: process (clk_i) is
@@ -238,13 +234,13 @@ begin  -- architecture a1
         curr_gen_start_req <= '0';
         curr_gen_stop_req <= '0';
       else
-        curr_state <= curr_state;
-        curr_err_arbitration <= curr_err_arbitration;
-        curr_err_noack_data <= curr_err_noack_data;
-        curr_err_noack_address <= curr_err_noack_address;
-        curr_err_general <= curr_err_general;
-        curr_gen_start_req <= curr_gen_start_req;
-        curr_gen_stop_req <= curr_gen_stop_req;
+        curr_state <= next_state;
+        curr_err_arbitration <= next_err_arbitration;
+        curr_err_noack_data <= next_err_noack_data;
+        curr_err_noack_address <= next_err_noack_address;
+        curr_err_general <= next_err_general;
+        curr_gen_start_req <= next_gen_start_req;
+        curr_gen_stop_req <= next_gen_stop_req;
       end if;
     end if;
   end process set_regs;

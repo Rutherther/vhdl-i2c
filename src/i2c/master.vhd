@@ -5,7 +5,8 @@ library utils;
 
 entity master is
   generic (
-    SCL_FALLING_DELAY : natural := 5);
+    SCL_FALLING_DELAY : natural := 5;
+    SCL_MIN_STABLE_CYCLES : natural := 10);
 
   port (
     clk_i               : in  std_logic;  -- Synchronous clock
@@ -19,13 +20,11 @@ entity master is
     rx_valid_o          : out std_logic;  -- Data in rx_data are valid
     rx_data_o           : out std_logic_vector(7 downto 0);  -- Received data
     rx_confirm_i        : in  std_logic;  -- Confirm data from rx_data are read
-    rx_stretch_i        : in  std_logic;
     -- tx
     tx_ready_o          : out std_logic;  -- Transmitter ready for new data
     tx_valid_i          : in  std_logic;  -- Are data in tx_data valid? Should be
                                           -- a pulse for one cycle only
     tx_data_i           : in  std_logic_vector(7 downto 0);  -- Data to transmit
-    tx_stretch_i        : in  std_logic;
     tx_clear_buffer_i   : in  std_logic;
     -- errors
     err_noack_data_o    : out std_logic;
@@ -90,6 +89,7 @@ architecture a1 of master is
 
   signal scl_falling_delayed : std_logic;
   signal waiting_for_data : std_logic;
+  signal scl_gen_falling : std_logic;
 begin  -- architecture a1
   rw_o <= rw;
   dev_busy_o <= transmitting or receiving;
@@ -97,9 +97,12 @@ begin  -- architecture a1
   waiting_for_data <= tx_scl_stretch or rx_scl_stretch;
   waiting_o <= waiting_for_data;
 
-  scl_enable_o <= tx_scl_stretch when transmitting = '1' and tx_stretch_i = '1' and scl_i = '0' else
-                  rx_scl_stretch when receiving = '1' and rx_stretch_i = '1' and scl_i = '0' else
-                  scl_gen_scl_enable;
+  scl_enable_o <= scl_gen_scl_enable;
+
+  scl_gen_falling <= cond_gen_req_scl_fall when cond_gen = '1' else
+                     tx_scl_stretch when transmitting = '1' else
+                     rx_scl_stretch when transmitting = '1' else
+                     '0';
 
   sda_enable_o <= tx_sda_enable when transmitting = '1' else
                   rx_sda_enable when receiving = '1' else
@@ -164,7 +167,7 @@ begin  -- architecture a1
 
   scl_generator : entity work.scl_generator
     generic map (
-      MIN_STABLE_CYCLES => SCL_FALLING_DELAY)
+      MIN_STABLE_CYCLES => SCL_MIN_STABLE_CYCLES)
     port map (
       clk_i            => clk_i,
       rst_in           => rst_in,
@@ -173,7 +176,7 @@ begin  -- architecture a1
       scl_falling_i    => scl_falling,
       gen_continuous_i => scl_gen_req_continuous,
       gen_rising_i     => cond_gen_req_scl_rise,
-      gen_falling_i    => cond_gen_req_scl_fall,
+      gen_falling_i    => scl_gen_falling,
       scl_enable_o     => scl_gen_scl_enable,
       cannot_comply_o  => open);
 
