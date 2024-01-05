@@ -46,6 +46,7 @@ entity master_state is
     address_gen_o            : out std_logic;
     receive_o                : out std_logic;
     transmit_o               : out std_logic;
+    dev_busy_o               : out std_logic;
     bus_busy_o               : out std_logic);
 
 end entity master_state;
@@ -101,6 +102,7 @@ begin  -- architecture a1
   req_start_o <= '1' when curr_state = GENERATING_START or curr_state = GENERATED_START else '0';
   req_stop_o <= '1' when curr_state = GENERATING_STOP or curr_state = GENERATED_STOP else '0';
   cond_gen_o <= cond_gen;
+  dev_busy_o <= '1' when curr_state /= IDLE and curr_state /= BUS_BUSY and curr_state /= ERR else '0';
 
   address_gen_start_o <= '1' when curr_state = GENERATED_START and next_state = GENERATING_ADDRESS else '0';
 

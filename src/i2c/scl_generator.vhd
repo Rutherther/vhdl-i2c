@@ -43,9 +43,6 @@ architecture a1 of scl_generator is
 
   signal curr_scl_enable : std_logic := '0';
   signal next_scl_enable : std_logic;
-
-  signal curr_requested_change : std_logic;
-  signal next_requested_change : std_logic;
 begin  -- architecture a1
 
   cannot_comply_o <= '1' when curr_state = CHANGING and scl_changing /= '1' else '0';
@@ -90,13 +87,11 @@ begin  -- architecture a1
       if rst_in = '0' then              -- synchronous reset (active low)
         curr_stable_count <= 0;
         curr_scl_enable <= '0';
-        curr_requested_change <= '0';
         curr_state <= OBSERVE;
         curr_scl <= '1';
       else
         curr_stable_count <= next_stable_count;
         curr_scl_enable <= next_scl_enable;
-        curr_requested_change <= next_requested_change;
         curr_state <= next_state;
         curr_scl <= next_scl;
       end if;

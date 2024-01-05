@@ -52,7 +52,7 @@ begin  -- architecture a1
               curr_scl;
 
   done_o <= curr_done and not next_done;
-  next_done <= '1' when curr_state = ACK and next_state /= ACK else
+  next_done <= '1' when curr_state = ACK and scl_rising_i = '1' else
                '1' when curr_done = '1' and scl_falling_delayed_i = '0' else
                '0';
 

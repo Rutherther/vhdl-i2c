@@ -91,7 +91,6 @@ architecture a1 of master is
   signal waiting_for_data : std_logic;
   signal scl_gen_falling : std_logic;
 begin  -- architecture a1
-  dev_busy_o <= transmitting or receiving;
   bus_busy_o <= bus_busy;
   waiting_for_data <= tx_scl_stretch or rx_scl_stretch;
   waiting_o <= waiting_for_data;
@@ -277,6 +276,7 @@ begin  -- architecture a1
       address_gen_o            => adr_gen,
       receive_o                => receiving,
       transmit_o               => transmitting,
+      dev_busy_o               => dev_busy_o,
       bus_busy_o               => bus_busy);
 
 end architecture a1;

@@ -185,10 +185,6 @@ begin  -- architecture a1
         curr_saving_buffer_index <= 0;
         curr_scl <= '1';                -- assume 1 (the default, no one transmitting)
         curr_done <= next_done;
-      elsif rst_i2c_i = '1' then
-        curr_state <= IDLE;
-        curr_scl <= '1';                -- assume 1 (the default, no one transmitting)
-        curr_done <= '0';
       else
         curr_state <= next_state;
         curr_tx_buffers <= next_tx_buffers;
@@ -197,6 +193,12 @@ begin  -- architecture a1
         curr_saving_buffer_index <= next_saving_buffer_index;
         curr_scl <= next_scl;
         curr_done <= next_done;
+      end if;
+
+      if rst_i2c_i = '1' then
+        curr_state <= IDLE;
+        curr_scl <= '1';                -- assume 1 (the default, no one transmitting)
+        curr_done <= '0';
       end if;
     end if;
   end process set_regs;
