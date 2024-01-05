@@ -98,10 +98,10 @@ begin  -- architecture a1
                 (curr_index + 1) when go_next = '1' else
                 curr_index;
 
-  go_next <= '1' when tx_ready = '1' and curr_index < INIT_DATA'length else '0';
+  go_next <= '1' when tx_ready = '1' and curr_index < INIT_DATA'length and curr_state = COUNT else '0';
 
 
-  tx_valid <= '1' when tx_ready = '1' and curr_index < INIT_DATA'length else '0';
+  tx_valid <= '1' when go_next = '1' else '0';
   tx_data <= INIT_DATA(curr_index) when curr_index < INIT_DATA'length else "00000000";
 
   next_state <= START when start_i = '1' and curr_state = IDLE else
