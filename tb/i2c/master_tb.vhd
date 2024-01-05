@@ -45,7 +45,7 @@ architecture tb of master_tb is
   signal one  : std_logic := '1';
   signal zero : std_logic := '0';
 
-  constant SCL_MIN_STABLE_CYCLES : natural := 5;
+  constant SCL_MIN_STABLE_CYCLES : natural := 10;
   constant TIMEOUT : time := SCL_MIN_STABLE_CYCLES * CLK_PERIOD * 2;
 begin  -- architecture tb
 
@@ -168,6 +168,119 @@ begin  -- architecture tb
         check_errors;
         i2c_slave_check_stop(TIMEOUT, scl, sda);
         check_errors;
+      elsif run("multi_read") then
+        request_start("1110101", '1');
+        i2c_slave_check_start("1110101", '1', TIMEOUT, scl, sda);
+        i2c_slave_transmit("11101010", TIMEOUT, scl => scl, sda => sda);
+        rx_read_data("11101010", rx_confirm);
+
+        i2c_slave_transmit("00001111", TIMEOUT, scl => scl, sda => sda);
+        rx_read_data("00001111", rx_confirm);
+        i2c_slave_transmit("11110000", TIMEOUT, scl => scl, sda => sda);
+        rx_read_data("11110000", rx_confirm);
+        request_stop;
+        check_errors;
+        i2c_slave_check_stop(TIMEOUT, scl, sda);
+        check_errors;
+      elsif run("multi_write") then
+        tx_write_data("11101010", tx_data, tx_valid);
+        tx_write_data("00011100", tx_data, tx_valid);
+        request_start("1110101", '0');
+        i2c_slave_check_start("1110101", '0', TIMEOUT, scl, sda);
+        i2c_slave_receive("11101010", TIMEOUT, scl, sda);
+        tx_write_data("00000000", tx_data, tx_valid);
+        i2c_slave_receive("00011100", TIMEOUT, scl, sda);
+        i2c_slave_receive("00000000", TIMEOUT, scl, sda);
+        request_stop;
+        check_errors;
+        i2c_slave_check_stop(TIMEOUT, scl, sda);
+        check_errors;
+      elsif run("waiting") then
+        request_start("1110101", '0');
+        i2c_slave_check_start("1110101", '0', TIMEOUT, scl, sda);
+        check_errors;
+        wait until falling_edge(clk);
+        wait until falling_edge(clk);
+        wait until falling_edge(clk);
+        wait until falling_edge(clk);
+        for i in 0 to 100 loop
+          check_equal(waiting, '1');
+          check_equal(scl, '0');
+          wait until falling_edge(clk);
+        end loop;  -- i
+
+        check_errors;
+        tx_write_data("00000000", tx_data, tx_valid);
+        check_equal(waiting, '0');
+        i2c_slave_receive("00000000", 2 * TIMEOUT, scl, sda);
+        request_stop;
+        check_errors;
+        i2c_slave_check_stop(TIMEOUT, scl, sda);
+        check_errors;
+      elsif run("write_read") then
+        tx_write_data("11101010", tx_data, tx_valid);
+        tx_write_data("00001111", tx_data, tx_valid);
+        request_start("0001011", '0');
+        i2c_slave_check_start("0001011", '0', TIMEOUT, scl, sda);
+        i2c_slave_receive("11101010", TIMEOUT, scl, sda);
+        i2c_slave_receive("00001111", TIMEOUT, scl, sda);
+        check_errors;
+        request_start("0001011", '1', stop => '1');
+        i2c_slave_check_start("0001011", '1', 2 * TIMEOUT, scl, sda);
+        check_errors;
+        i2c_slave_transmit("00010101", TIMEOUT, scl, sda);
+        rx_read_data("00010101", rx_confirm);
+        check_errors;
+        i2c_slave_check_stop(TIMEOUT, scl, sda);
+        check_errors;
+      elsif run("lost_arbitration_early") then
+        request_start("1110101", '0', stop => '1');
+        i2c_master_start("0000000", '0', scl, sda, exp_ack => '0');
+        check_errors(exp_arbitration => '1');
+      elsif run("lost_arbitration_late") then
+        request_start("1110101", '0', stop => '1');
+        tx_write_data("11101010", tx_data, tx_valid);
+        i2c_slave_check_start("1110101", '0', TIMEOUT, scl, sda);
+
+        sda <= '0';
+        wait_for_scl_rise(timeout, scl);
+        wait until falling_edge(clk);
+        wait until falling_edge(clk);
+        wait until falling_edge(clk);
+        wait until falling_edge(clk);
+        scl_fall(scl); -- have to do manually (simulate another master)
+        sda <= 'Z';
+
+        check_errors(exp_arbitration => '1');
+      elsif run("unexpected_start") then
+        request_start("1110101", '0', stop => '1');
+        tx_write_data("11101010", tx_data, tx_valid);
+        i2c_slave_check_start("1110101", '0', TIMEOUT, scl, sda);
+
+        wait_for_scl_rise(timeout, scl);
+        wait_for_scl_fall(timeout, scl);
+        wait_for_scl_rise(timeout, scl);
+        wait until falling_edge(clk);
+        sda <= '0'; -- start
+        wait until falling_edge(clk);
+        wait until falling_edge(clk);
+        wait until falling_edge(clk);
+        check_errors(exp_general => '1');
+      elsif run("noack_address") then
+        request_start("1110101", '0');
+        tx_write_data("11101010", tx_data, tx_valid);
+        i2c_slave_check_start("1110101", '0', TIMEOUT, scl, sda, ack => '0');
+        check_errors(exp_noack_address => '1');
+        i2c_slave_check_stop(TIMEOUT, scl, sda);
+        check_errors(exp_noack_address => '1');
+      elsif run("noack_data") then
+        request_start("1110101", '0');
+        tx_write_data("11101010", tx_data, tx_valid);
+        i2c_slave_check_start("1110101", '0', TIMEOUT, scl, sda);
+        i2c_slave_receive("11101010", TIMEOUT, scl, sda, ack => '0');
+        check_errors(exp_noack_data => '1');
+        i2c_slave_check_stop(TIMEOUT, scl, sda);
+        check_errors(exp_noack_data => '1');
       end if;
     end loop;
 
