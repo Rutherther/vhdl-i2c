@@ -14,8 +14,11 @@ entity counter is
   port (
     clk_i  : in std_logic;
     rst_i : in std_logic;
-    rst_on : out std_logic;
-    err_noack_o : out std_logic;
+    err_noack_data_o : out std_logic;
+    err_noack_address_o : out std_logic;
+    err_arbitration_o : out std_logic;
+    err_general_o : out std_logic;
+
     bus_busy_o : out std_logic;
     dev_busy_o : out std_logic;
     sda_io : inout std_logic;
@@ -40,7 +43,6 @@ architecture a1 of counter is
   signal tx_data : std_logic_vector(7 downto 0);
 begin
   rst_n <= not rst_sync;
-  rst_on <= rst_n;
 
   sync_reset: entity utils.metastability_filter
     port map (
@@ -77,7 +79,7 @@ begin
       tx_stretch_i   => '0',
       tx_clear_buffer_i => '0',
 
-      err_noack_o    => err_noack_o,
+      err_noack_o    => err_noack_data_o,
       rw_o           => open,
       dev_busy_o     => dev_busy_o,
       bus_busy_o     => bus_busy_o,

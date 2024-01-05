@@ -47,6 +47,8 @@ architecture tb of master_tb is
 
   constant SCL_MIN_STABLE_CYCLES : natural := 10;
   constant TIMEOUT : time := SCL_MIN_STABLE_CYCLES * CLK_PERIOD * 2;
+
+  signal stable_check : std_logic := '0';
 begin  -- architecture tb
 
   clk <= not clk after CLK_PERIOD / 2;
@@ -106,6 +108,9 @@ begin  -- architecture tb
   -- TODO ensure active only when no start/stop
   -- conditions should be generated...
   -- sda_stability_check: check_stable(clk, one, scl, not_scl, master_sda_enable);
+  --
+  sda_stable: check_stable(clk, stable_check, one, zero, master_sda);
+  scl_stable: check_stable(clk, stable_check, one, zero, master_scl);
 
   main: process is
     procedure request_start(
@@ -195,7 +200,7 @@ begin  -- architecture tb
         check_errors;
         i2c_slave_check_stop(TIMEOUT, scl, sda);
         check_errors;
-      elsif run("waiting") then
+      elsif run("waiting_write_tx") then
         request_start("1110101", '0');
         i2c_slave_check_start("1110101", '0', TIMEOUT, scl, sda);
         check_errors;
@@ -203,9 +208,10 @@ begin  -- architecture tb
         wait until falling_edge(clk);
         wait until falling_edge(clk);
         wait until falling_edge(clk);
+        wait until falling_edge(clk);
         for i in 0 to 100 loop
-          check_equal(waiting, '1');
-          check_equal(scl, '0');
+          check_equal(waiting, '1', "Waiting wrong");
+          check_equal(scl, '0', "SCL wrong");
           wait until falling_edge(clk);
         end loop;  -- i
 
@@ -217,6 +223,28 @@ begin  -- architecture tb
         check_errors;
         i2c_slave_check_stop(TIMEOUT, scl, sda);
         check_errors;
+      elsif run("waiting_stop") then
+        tx_write_data("00000000", tx_data, tx_valid);
+        request_start("1110101", '0');
+        i2c_slave_check_start("1110101", '0', TIMEOUT, scl, sda);
+        i2c_slave_receive("00000000", 2 * TIMEOUT, scl, sda);
+        wait until falling_edge(clk);
+        wait until falling_edge(clk);
+        wait until falling_edge(clk);
+        wait until falling_edge(clk);
+        check_equal(waiting, '1');
+        request_stop;
+        check_errors;
+        i2c_slave_check_stop(TIMEOUT, scl, sda);
+        check_errors;
+
+      elsif run("waiting_right_away_stop") then
+        request_start("1110101", '0', stop => '1');
+        i2c_slave_check_start("1110101", '0', TIMEOUT, scl, sda);
+        check_errors;
+        i2c_slave_check_stop(TIMEOUT, scl, sda);
+        check_errors;
+
       elsif run("write_read") then
         tx_write_data("11101010", tx_data, tx_valid);
         tx_write_data("00001111", tx_data, tx_valid);
@@ -283,6 +311,9 @@ begin  -- architecture tb
         check_errors(exp_noack_data => '1');
       end if;
     end loop;
+
+    stable_check <= '1';
+    wait for TIMEOUT * 10;
 
     test_runner_cleanup(runner);
   end process main;

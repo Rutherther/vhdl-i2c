@@ -1,5 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 entity master_state is
 
@@ -91,7 +92,7 @@ architecture a1 of master_state is
 begin  -- architecture a1
   any_err <= curr_err_arbitration or curr_err_noack_data or curr_err_noack_address or curr_err_general;
   any_terminal_err <= curr_err_noack_data or curr_err_noack_address or curr_err_general;
-  control_over_bus <= '1' when curr_state /= IDLE and curr_state /= BUS_BUSY;
+  control_over_bus <= '1' when curr_state /= IDLE and curr_state /= BUS_BUSY else '0';
   can_gen_cond <= '1' when curr_state = IDLE or ((curr_state = TRANSMITTING or curr_state = RECEIVING) and (waiting_for_data_i = '1' or tx_done_i = '1' or rx_done_i = '1')) else '0';
 
   req_scl_continuous_o <= '1' when curr_state = GENERATING_ADDRESS or
@@ -119,12 +120,12 @@ begin  -- architecture a1
 
   rst_i2c_o <= any_err or cond_gen;
 
-  next_gen_start_req <= '1' when start_i = '1' and run_i = '1' else
-                        '0' when curr_state = GENERATING_START else
+  next_gen_start_req <= '0' when curr_state = GENERATING_START or curr_state = GENERATED_START else
+                        '1' when start_i = '1' and run_i = '1' else
                         curr_gen_start_req;
 
-  next_gen_stop_req <= '1' when stop_i = '1' else
-                        '0' when curr_state = GENERATING_STOP else
+  next_gen_stop_req <= '0' when curr_state = GENERATING_STOP or curr_state = GENERATED_STOP else
+                       '1' when stop_i = '1' else
                         curr_gen_stop_req;
 
   next_err_general <= '0' when curr_state = GENERATING_START else
@@ -219,12 +220,13 @@ begin  -- architecture a1
     end if;
 
     if can_gen_cond = '1' then
-      if curr_gen_start_req = '1' then
+      if curr_gen_start_req = '1' and curr_state /= GENERATING_START and curr_state /= GENERATED_START then
         next_state <= GENERATING_START;
+       
         -- if no control over bus, do not
         -- allow generating stop condition
         -- TODO consider not checking that?
-      elsif curr_gen_stop_req = '1' and control_over_bus = '1' then
+      elsif curr_gen_stop_req = '1' and control_over_bus = '1' and curr_state /= GENERATING_STOP and curr_state /= GENERATED_STOP then
         next_state <= GENERATING_STOP;
       end if;
     end if;

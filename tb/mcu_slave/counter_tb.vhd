@@ -38,14 +38,13 @@ begin  -- architecture tb
     generic map (
       DELAY => 1)
     port map (
-      clk_i       => clk,
-      rst_i       => rst,
-      rst_on      => open,
-      err_noack_o => err_noack,
-      dev_busy_o  => dev_busy,
-      bus_busy_o  => bus_busy,
-      sda_io      => sda,
-      scl_io      => scl
+      clk_i            => clk,
+      rst_i            => rst,
+      err_noack_data_o => err_noack,
+      dev_busy_o       => dev_busy,
+      bus_busy_o       => bus_busy,
+      sda_io           => sda,
+      scl_io           => scl
     );
 
   -- pull up

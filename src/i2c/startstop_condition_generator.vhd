@@ -1,5 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 library utils;
 
@@ -105,6 +106,8 @@ begin  -- architecture a1
       elsif curr_count = DELAY then
         next_state <= PREPARE_SDA;
         next_count_en <= '0';
+      elsif curr_scl = '1' then
+        next_count_en <= '0';
       end if;
     elsif curr_state = PREPARE_SDA then
       next_count_en <= '1';
@@ -124,6 +127,8 @@ begin  -- architecture a1
       elsif curr_count = DELAY then
         next_state <= GEN_COND;
         next_count_en <= '0';
+      elsif curr_scl = '1' then
+        next_count_en <= '1';
       end if;
     elsif curr_state = GEN_COND then
       -- assume correct condition here. If it's the wrong one,
@@ -144,6 +149,8 @@ begin  -- architecture a1
       elsif curr_count = DELAY then
         next_state <= DONE;
         next_count_en <= '0';
+      elsif curr_scl = '0' then
+        next_count_en <= '1';
       end if;
     elsif curr_state = DONE then
       next_count_en <= '0';

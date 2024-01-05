@@ -22,7 +22,7 @@ entity address_generator is
 end entity address_generator;
 
 architecture a1 of address_generator is
-  type state_t is (IDLE, WAITING_FOR_FALLING, GEN, ACK, DONE);
+  type state_t is (IDLE, WAITING_FOR_FALLING, GEN, ACK);
   signal curr_state : state_t;
   signal next_state : state_t;
 
@@ -31,6 +31,9 @@ architecture a1 of address_generator is
 
   signal curr_scl : std_logic;
   signal next_scl : std_logic;
+
+  signal curr_done : std_logic;
+  signal next_done : std_logic;
 begin  -- architecture a1
 
   sda_enable_o <= not address_i(6 - curr_index) when curr_index <= 6 and curr_state = GEN else
@@ -43,11 +46,15 @@ begin  -- architecture a1
 
   unexpected_sda_o <= '1' when curr_state = GEN and curr_index <= 6 and sda_i /= address_i(6 - curr_index) and scl_rising_i = '1' else '0';
   noack_o <= '1' when curr_state = ACK and scl_rising_i = '1' and sda_i = '1' else '0';
-  done_o <= '1' when curr_state = DONE else '0';
 
   next_scl <= '1' when scl_rising_i = '1' else
               '0' when scl_falling_delayed_i = '1' else
               curr_scl;
+
+  done_o <= curr_done and not next_done;
+  next_done <= '1' when curr_state = ACK and next_state /= ACK else
+               '1' when curr_done = '1' and scl_falling_delayed_i = '0' else
+               '0';
 
   set_next_state: process (all) is
     variable start_gen : std_logic;
@@ -55,8 +62,8 @@ begin  -- architecture a1
     next_state <= curr_state;
     start_gen := '0';
 
-    if curr_state = IDLE then
-    elsif curr_state = WAITING_FOR_FALLING then
+    -- if curr_state = IDLE then
+    if curr_state = WAITING_FOR_FALLING then
       if scl_falling_delayed_i = '1' then
         next_state <= GEN;
       end if;
@@ -65,7 +72,7 @@ begin  -- architecture a1
         next_state <= ACK;
       end if;
     elsif curr_state = ACK and scl_rising_i = '1' then
-      next_state <= DONE;
+      next_state <= IDLE;
     end if;
 
     if start_i = '1' then
@@ -88,10 +95,12 @@ begin  -- architecture a1
         curr_state <= IDLE;
         curr_index <= 0;
         curr_scl <= '1';
+        curr_done <= '0';
       else
         curr_state <= next_state;
         curr_index <= next_index;
         curr_scl <= next_scl;
+        curr_done <= next_done;
       end if;
     end if;
   end process set_regs;

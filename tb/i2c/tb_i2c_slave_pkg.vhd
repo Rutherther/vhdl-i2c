@@ -116,7 +116,7 @@ package body tb_i2c_slave_pkg is
       wait_for_scl_rise(scl_timeout, scl);
       if exp_data(i) = '1' then
         check(sda = '1' or sda = 'H', result("Received data (sda) not as expected."));
-      else
+      elsif exp_data(i) = '0' then
         check(sda = '0' or sda = 'L', result("Received data (sda) not as expected."));
       end if;
       wait_for_scl_fall(scl_timeout, scl);

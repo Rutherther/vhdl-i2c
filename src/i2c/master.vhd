@@ -5,8 +5,8 @@ library utils;
 
 entity master is
   generic (
-    SCL_FALLING_DELAY : natural := 5;
-    SCL_MIN_STABLE_CYCLES : natural := 10);
+    SCL_FALLING_DELAY : natural;
+    SCL_MIN_STABLE_CYCLES : natural);
 
   port (
     clk_i               : in  std_logic;  -- Synchronous clock
