@@ -18,6 +18,7 @@ entity master_state is
     noack_data_i             : in  std_logic;
     unexpected_sda_address_i : in  std_logic;
     unexpected_sda_data_i    : in  std_logic;
+    condition_early_i        : in std_logic;
 -- error outputs (reset on new run)
     err_noack_address_o      : out std_logic;
     err_noack_data_o         : out std_logic;
@@ -86,17 +87,19 @@ architecture a1 of master_state is
   signal any_err, any_terminal_err : std_logic;
   signal control_over_bus : std_logic;
   signal can_gen_cond : std_logic;
+  signal cond_gen : std_logic;
 begin  -- architecture a1
   any_err <= curr_err_arbitration or curr_err_noack_data or curr_err_noack_address or curr_err_general;
   any_terminal_err <= curr_err_noack_data or curr_err_noack_address or curr_err_general;
   control_over_bus <= '1' when curr_state /= IDLE and curr_state /= BUS_BUSY;
-  can_gen_cond <= '1' when curr_state = IDLE or waiting_for_data_i = '1' or tx_done_i = '1' or rx_done_i = '1' else '0';
+  can_gen_cond <= '1' when curr_state = IDLE or ((curr_state = TRANSMITTING or curr_state = RECEIVING) and (waiting_for_data_i = '1' or tx_done_i = '1' or rx_done_i = '1')) else '0';
 
   req_scl_continuous_o <= '1' when curr_state = GENERATING_ADDRESS or
                           curr_state = TRANSMITTING or curr_state = RECEIVING else '0';
 
   req_start_o <= '1' when curr_state = GENERATING_START or curr_state = GENERATED_START else '0';
   req_stop_o <= '1' when curr_state = GENERATING_STOP or curr_state = GENERATED_STOP else '0';
+  cond_gen_o <= cond_gen;
 
   address_gen_start_o <= '1' when curr_state = GENERATED_START and next_state = GENERATING_ADDRESS else '0';
 
@@ -110,11 +113,11 @@ begin  -- architecture a1
   err_arbitration_o <= curr_err_arbitration;
   err_general_o <= curr_err_general;
 
-  cond_gen_o <= '1' when
+  cond_gen <= '1' when
                 curr_state = GENERATING_STOP or curr_state = GENERATED_STOP or
                 curr_state = GENERATING_START or curr_state = GENERATED_START else '0';
 
-  rst_i2c_o <= any_err;
+  rst_i2c_o <= any_err or cond_gen;
 
   next_gen_start_req <= '1' when start_i = '1' and run_i = '1' else
                         '0' when curr_state = GENERATING_START else
@@ -124,7 +127,7 @@ begin  -- architecture a1
                         '0' when curr_state = GENERATING_STOP else
                         curr_gen_stop_req;
 
-  next_err_general <= '0' when start_condition_i = '1' else
+  next_err_general <= '0' when curr_state = GENERATING_START else
                       '1' when curr_err_general = '1' else
                       '1' when curr_state = GENERATING_STOP and start_condition_i = '1' else
                       '1' when curr_state = GENERATING_START and stop_condition_i = '1' else
@@ -137,6 +140,7 @@ begin  -- architecture a1
                           '1' when curr_err_arbitration = '1' else
                           '1' when unexpected_sda_data_i = '1' and curr_state = TRANSMITTING else
                           '1' when unexpected_sda_address_i = '1' and curr_state = GENERATING_ADDRESS else
+                          '1' when condition_early_i = '1' and curr_state = GENERATED_START else
                           '0';
 
   next_err_noack_data <= '0' when start_condition_i = '1' else
@@ -146,7 +150,7 @@ begin  -- architecture a1
 
   next_err_noack_address <= '0' when start_condition_i = '1' else
                             '1' when curr_err_noack_address = '1' else
-                            '1' when noack_address_i = '1' and curr_state = TRANSMITTING and expect_ack_i = '1' else
+                            '1' when noack_address_i = '1' and curr_state = GENERATING_ADDRESS and expect_ack_i = '1' else
                             '0';
 
   set_next_state: process (all) is
@@ -170,6 +174,8 @@ begin  -- architecture a1
         next_state <= GENERATING_STOP;
       elsif req_cond_done_i = '1' then
         next_state <= GENERATING_ADDRESS;
+      elsif condition_early_i = '1' then
+        next_state <= IDLE;
       end if;
     elsif curr_state = GENERATING_ADDRESS then
       if any_terminal_err = '1' then
@@ -193,7 +199,7 @@ begin  -- architecture a1
       end if;
     elsif curr_state = GENERATING_STOP then
       if stop_condition_i = '1' then
-        next_state <= GENERATING_STOP;
+        next_state <= GENERATED_STOP;
       elsif req_cond_done_i = '1' then
         -- done before cond generated?
         -- That's not right...
@@ -201,6 +207,8 @@ begin  -- architecture a1
       end if;
     elsif curr_state = GENERATED_STOP then
       if req_cond_done_i = '1' then
+        next_state <= IDLE;
+      elsif condition_early_i = '1' then
         next_state <= IDLE;
       end if;
     elsif curr_state = ERR then
@@ -219,6 +227,10 @@ begin  -- architecture a1
       elsif curr_gen_stop_req = '1' and control_over_bus = '1' then
         next_state <= GENERATING_STOP;
       end if;
+    end if;
+
+    if curr_err_arbitration = '1' then
+      next_state <= IDLE;
     end if;
   end process set_next_state;
 

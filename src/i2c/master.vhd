@@ -80,6 +80,7 @@ architecture a1 of master is
   signal cond_gen_req_scl_fall : std_logic;
   signal cond_gen_req_scl_rise : std_logic;
   signal cond_gen_done : std_logic;
+  signal cond_gen_early : std_logic;
 
   signal scl_gen_scl_enable : std_logic;
   signal scl_gen_req_continuous : std_logic;
@@ -161,6 +162,7 @@ begin  -- architecture a1
       gen_stop_i            => cond_gen_stop,
       req_scl_fall_o        => cond_gen_req_scl_fall,
       req_scl_rise_o        => cond_gen_req_scl_rise,
+      early_condition_o     => cond_gen_early,
       done_o                => cond_gen_done);
 
   scl_generator : entity work.scl_generator
@@ -248,6 +250,7 @@ begin  -- architecture a1
       noack_data_i             => tx_noack,
       unexpected_sda_address_i => adr_unexpected_sda,
       unexpected_sda_data_i    => tx_unexpected_sda,
+      condition_early_i        => cond_gen_early,
 --
       err_noack_address_o      => err_noack_address_o,
       err_noack_data_o         => err_noack_data_o,

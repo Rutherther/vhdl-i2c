@@ -27,6 +27,8 @@ entity startstop_condition_generator is
     req_scl_fall_o        : out std_logic;
     req_scl_rise_o        : out std_logic;
 
+    early_condition_o     : out std_logic;
+
     done_o                : out std_logic);
 
 end entity startstop_condition_generator;
@@ -39,7 +41,7 @@ architecture a1 of startstop_condition_generator is
   -- and take it from another entity instead, without communicating the current
   -- level.),
   -- 5. done!
-  type state_t is (IDLE, PREREQ_SCL_FALL, PREPARE_SDA, REQ_SCL_RISE, GEN_COND, REQ_SCL_FALL, DONE);
+  type state_t is (IDLE, PREREQ_SCL_FALL, PREPARE_SDA, REQ_SCL_RISE, GEN_COND, REQ_SCL_FALL, EARLY_COND, DONE);
   signal curr_state : state_t := IDLE;
   signal next_state : state_t;
 
@@ -61,6 +63,7 @@ begin  -- architecture a1
                  'X';
 
   done_o <= '1' when curr_state = DONE else '0';
+  early_condition_o <=  '1' when curr_state = EARLY_COND else '0';
 
   req_scl_rise_o <= '1' when curr_state = REQ_SCL_RISE else '0';
   req_scl_fall_o <= '1' when curr_state = REQ_SCL_FALL or curr_state = PREREQ_SCL_FALL else '0';
@@ -110,6 +113,7 @@ begin  -- architecture a1
         -- cannot do anything :(
       elsif curr_count = DELAY then
         next_state <= REQ_SCL_RISE;
+        next_count_en <= '0';
       elsif curr_scl = '1' then
         next_state <= GEN_COND;
         next_count_en <= '0';
@@ -145,6 +149,17 @@ begin  -- architecture a1
       next_count_en <= '0';
       if any_request = '0' then
         next_state <= IDLE;
+      end if;
+    elsif curr_state = EARLY_COND then
+      next_count_en <= '0';
+      if any_request = '0' then
+        next_state <= IDLE;
+      end if;
+    end if;
+
+    if start_condition_i = '1' or stop_condition_i = '1' then
+      if curr_state = PREREQ_SCL_FALL or curr_state = PREPARE_SDA or curr_state = REQ_SCL_RISE then
+        next_state <= EARLY_COND;
       end if;
     end if;
   end process set_next_state;
