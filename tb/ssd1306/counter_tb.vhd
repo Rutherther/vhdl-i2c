@@ -79,15 +79,9 @@ begin  -- architecture tb
     test_runner_setup(runner, runner_cfg);
 
     while test_suite loop
-      if run("no_check") then
-        wait for 50 ms;
-        -- i2c_slave_check_start(ADDRESS, '0', TIMEOUT, scl, sda);
-        -- for i in 0 to 100 loop
-        --   i2c_slave_receive(X"ZZ");
-        -- end loop;  -- i
-        -- -- stop because no ack
-        -- i2c_slave_check_stop(TIMEOUT * 10, scl, sda);
-      end if;
+      -- if run("no_check") then
+      --   wait for 50 ms;
+      -- end if;
     end loop;
 
     test_runner_cleanup(runner);
