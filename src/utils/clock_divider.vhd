@@ -14,21 +14,28 @@ entity clock_divider is
 end entity clock_divider;
 
 architecture a1 of clock_divider is
-  constant MAX : integer := IN_FREQ / OUT_FREQ;
-  signal counter_next : integer range 0 to MAX;
-  signal counter_reg : integer range 0 to MAX;
+  constant MAX : integer := IN_FREQ / OUT_FREQ / 2;
+  signal curr_count : integer range 0 to MAX - 1;
+  signal next_count : integer range 0 to MAX - 1;
+
+  signal gen_clk : std_logic;
 begin  -- architecture a1
   keep_max_freq: if IN_FREQ = OUT_FREQ generate
     clk_o <= clk_i;
   end generate keep_max_freq;
 
   counter: if IN_FREQ /= OUT_FREQ generate
-    counter_next <= (counter_reg + 1) when counter_reg < MAX else 0;
-    clk_o <= '1' when counter_reg >= MAX/2 else '0';
+    clk_o <= gen_clk;
+    next_count <= (curr_count - 1) when curr_count > 0 else MAX - 1;
+
     set_counter: process (clk_i) is
     begin  -- process set_counter
       if rising_edge(clk_i) then          -- rising clock edge
-        counter_reg <= counter_next;
+        curr_count <= next_count;
+
+        if curr_count = 0 then
+          gen_clk <= not gen_clk;
+        end if;
       end if;
     end process set_counter;
   end generate counter;
