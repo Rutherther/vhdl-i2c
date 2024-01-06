@@ -11,7 +11,7 @@ entity ssd1306_counter is
 
   generic (
     CLK_FREQ       : integer   := 100000000;  -- Input clock frequency
-    I2C_CLK_FREQ   : integer   := 5000000;
+    I2C_CLK_FREQ   : integer   := 10000000; -- 12500000;
     COUNT_FREQ     : integer := 1;
     DELAY : integer := 20;
     EXPECT_ACK : std_logic := '1';
@@ -127,7 +127,6 @@ begin  -- architecture a+
              SSD1306_ZERO(0) when curr_state = ZERO_OUT_RAM and curr_index = 0 else
              SSD1306_ZERO(1) when curr_state = ZERO_OUT_RAM and curr_index /= 0 else
              SSD1306_CURSOR_TO_ZERO(curr_index) when curr_state = SET_ADR_ZERO and curr_index < max_index else
-
              digit_data(curr_index) when curr_state = DIGIT_N and curr_index < max_index else
              "00000000";
 
@@ -204,7 +203,7 @@ begin  -- architecture a+
 
   counter: entity utils.counter
     generic map (
-      MAX      => 9,
+      MAX      => 10,
       DIGITS   => DIGITS,
       IN_FREQ  => CLK_FREQ,
       OUT_FREQ => COUNT_FREQ)
