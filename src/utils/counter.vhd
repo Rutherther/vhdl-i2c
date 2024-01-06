@@ -17,6 +17,10 @@ entity counter is
 end entity counter;
 
 architecture a1 of counter is
+  constant MAX_COUNT : natural := IN_FREQ / OUT_FREQ;
+  signal curr_count : integer range 0 to MAX_COUNT - 1;
+  signal next_count : integer range 0 to MAX_COUNT - 1;
+
   signal count_clk : std_logic;
 
   signal carries : std_logic_vector(DIGITS downto 0);
@@ -24,20 +28,20 @@ architecture a1 of counter is
 begin  -- architecture a1
   value_o <= value;
 
-  pulse_gen: entity work.sync_edge_detector
-    port map (
-      clk_i          => clk_i,
-      signal_i       => count_clk,
-      rising_edge_o  => carries(0),
-      falling_edge_o => open);
+  next_count <= curr_count - 1 when curr_count > 0 else MAX_COUNT - 1;
 
-  clock_divider: entity work.clock_divider
-    generic map (
-      IN_FREQ => IN_FREQ,
-      OUT_FREQ => OUT_FREQ)
-    port map (
-      clk_i => clk_i,
-      clk_o => count_clk);
+  carries(0) <= '1' when curr_count = 0 else '0';
+
+  set_regs: process(clk_i) is
+  begin
+    if rising_edge(clk_i) then
+      if rst_in = '0' then
+        curr_count <= MAX_COUNT - 1;
+      else
+	curr_count <= next_count;
+      end if;
+    end if;
+  end process set_regs;
 
   counters: for i in 0 to DIGITS - 1 generate
     bcd_counter: entity work.bcd_counter
