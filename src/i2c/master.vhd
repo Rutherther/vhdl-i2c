@@ -71,6 +71,7 @@ architecture a1 of master is
   signal adr_noack : std_logic;
   signal adr_unexpected_sda : std_logic;
   signal adr_done : std_logic;
+  signal adr_gen_store : std_logic;
   signal adr_gen_start : std_logic;
 
   signal cond_gen : std_logic;
@@ -223,6 +224,7 @@ begin  -- architecture a1
       clk_i                 => clk_i,
       rst_in                => rst_in,
       address_i             => slave_address_i,
+      store_address_rw_i    => adr_gen_store,
       scl_rising_i          => scl_rising,
       scl_falling_delayed_i => scl_falling_delayed,
       sda_enable_o          => adr_sda_enable,
@@ -265,6 +267,7 @@ begin  -- architecture a1
 --
       address_gen_start_o      => adr_gen_start,
       address_gen_done_i       => adr_done,
+      address_gen_store_o      => adr_gen_store,
 --
       req_start_o              => cond_gen_start,
       req_stop_o               => cond_gen_stop,

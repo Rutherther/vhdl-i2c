@@ -20,6 +20,7 @@ entity i2c_slave_state is
     address_detect_success_i : in  std_logic;
     address_detect_fail_i    : in  std_logic;
     address_detect_start_o   : out std_logic;
+    address_detect_store_o   : out std_logic;
     address_detect_o         : out std_logic;
 
     receive_o                : out std_logic;
@@ -48,16 +49,23 @@ architecture a1 of i2c_slave_state is
 
   signal communicating_with_master : std_logic;
 begin  -- architecture a1
-  communicating_with_master <= '1' when curr_state = BUS_ADDRESS or curr_state = RECEIVING or curr_state = TRANSMITTING else '0';
-  address_detect_start_o    <= '1' when start_condition_i = '1'                                                         else '0';
-  address_detect_o          <= '1' when curr_state = BUS_ADDRESS                                                        else '0';
+  rst_i2c_o                 <= curr_err_noack or curr_err_sda or start_condition_i or stop_condition_i;
+
+  address_detect_start_o    <= start_condition_i;
+  address_detect_store_o    <= start_condition_i;
+  address_detect_o          <= '1' when curr_state = BUS_ADDRESS else '0';
+
   err_noack_o               <= curr_err_noack;
   err_sda_o                 <= curr_err_sda;
-  rst_i2c_o                 <= curr_err_noack or curr_err_sda or start_condition_i or stop_condition_i;
 
   receive_o <= '1' when curr_state = RECEIVING else '0';
   transmit_o <= '1' when curr_state = TRANSMITTING else '0';
   bus_busy_o <= '1' when curr_state = BUS_BUSY else '0';
+
+  communicating_with_master <= '1' when curr_state = BUS_ADDRESS or
+                                curr_state = RECEIVING or
+                                curr_state = TRANSMITTING else
+                               '0';
 
   next_err_sda <= '0' when start_condition_i = '1' or stop_condition_i = '1' else
                   '1' when curr_err_sda = '1' else

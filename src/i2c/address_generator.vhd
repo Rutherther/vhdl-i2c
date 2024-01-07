@@ -8,6 +8,7 @@ entity address_generator is
     rst_in                : in  std_logic;  -- Synchronous reset (active low)
     address_i             : in  std_logic_vector(6 downto 0);
     rw_i                  : in  std_logic;  -- Read (not write)
+    store_address_rw_i    : in  std_logic;
     start_i               : in  std_logic;  -- When to start sending the address.
                                             -- A pulse. Every time it's '1',
                                         -- address will be sent from beginning
@@ -26,6 +27,9 @@ architecture a1 of address_generator is
   signal curr_state : state_t;
   signal next_state : state_t;
 
+  signal curr_data : std_logic_vector(7 downto 0);
+  signal next_data : std_logic_vector(7 downto 0);
+
   signal curr_index : integer range 0 to 8;
   signal next_index : integer range 0 to 8;
 
@@ -36,9 +40,11 @@ architecture a1 of address_generator is
   signal next_done : std_logic;
 begin  -- architecture a1
 
-  sda_enable_o <= not address_i(6 - curr_index) when curr_index <= 6 and curr_state = GEN else
-                  not rw_i when curr_index = 7 and curr_state = GEN else
+  sda_enable_o <= not curr_data(7 - curr_index) when curr_index <= 7 and curr_state = GEN else
                   '0';
+
+  next_data <= address_i & rw_i when store_address_rw_i = '1' else
+               curr_data;
 
   next_index <= 0 when start_i = '1' else
                 curr_index + 1 when curr_index < 8 and scl_falling_delayed_i = '1' and curr_state = GEN else
@@ -96,11 +102,13 @@ begin  -- architecture a1
         curr_index <= 0;
         curr_scl <= '1';
         curr_done <= '0';
+        curr_data <= (others => '0');
       else
         curr_state <= next_state;
         curr_index <= next_index;
         curr_scl <= next_scl;
         curr_done <= next_done;
+        curr_data <= next_data;
       end if;
     end if;
   end process set_regs;

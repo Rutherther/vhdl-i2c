@@ -55,6 +55,7 @@ begin  -- architecture tb
       clk_i                 => clk,
       rst_in                => rst_n,
       start_i               => start,
+      store_address_rw_i    => '1',
       address_i             => address,
       rw_i                  => rw,
       sda_i                 => slave_sda,

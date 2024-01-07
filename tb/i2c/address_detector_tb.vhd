@@ -44,8 +44,9 @@ begin  -- architecture tb
     port map (
       clk_i                 => clk,
       rst_in                => rst_n,
+      store_address_i       => '1',
       address_i             => address,
-      scl_rising           => scl_rising,
+      scl_rising            => scl_rising,
       scl_falling_delayed_i => scl_falling,
       sda_i                 => sda,
       sda_enable_o          => sda_enable,

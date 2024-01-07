@@ -69,6 +69,7 @@ architecture a1 of slave is
   signal address_detect_activate : std_logic;
   signal address_detect_success : std_logic;
   signal address_detect_fail : std_logic;
+  signal address_detect_store : std_logic;
   signal address_detection : std_logic;
 
   signal rw : std_logic;
@@ -168,7 +169,8 @@ begin  -- architecture a1
       clk_i                 => clk_i,
       rst_in                => rst_in,
       address_i             => address_i,
-      scl_rising           => scl_rising,
+      store_address_i       => address_detect_store,
+      scl_rising            => scl_rising,
       scl_falling_delayed_i => scl_falling_delayed,
       sda_enable_o          => address_detect_sda_enable,
       sda_i                 => sync_sda,
@@ -193,6 +195,7 @@ begin  -- architecture a1
       address_detect_success_i => address_detect_success,
       address_detect_fail_i    => address_detect_fail,
       address_detect_start_o   => address_detect_activate,
+      address_detect_store_o   => address_detect_store,
       address_detect_o         => address_detection,
       receive_o                => receiving,
       transmit_o               => transmitting,
