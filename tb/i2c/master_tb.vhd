@@ -309,6 +309,51 @@ begin  -- architecture tb
         check_errors(exp_noack_data => '1');
         i2c_slave_check_stop(TIMEOUT, scl, sda);
         check_errors(exp_noack_data => '1');
+      elsif run("bus_busy") then
+        check_equal(bus_busy, '0');
+        check_equal(dev_busy, '0');
+        i2c_master_start("0000000", '0', scl, sda, exp_ack => '0');
+        check_equal(bus_busy, '1', "Bus busy wrong.");
+        check_equal(dev_busy, '0');
+        i2c_master_stop(scl, sda);
+        wait until falling_edge(clk);
+        wait until falling_edge(clk);
+        check_equal(bus_busy, '0');
+        check_equal(dev_busy, '0');
+        check_errors;
+      elsif run("bus_busy_start_request") then
+        check_equal(bus_busy, '0');
+        check_equal(dev_busy, '0');
+        i2c_master_start("0000000", '0', scl, sda, exp_ack => '0');
+        request_start("1111100", '0');
+        check_equal(bus_busy, '1', "Bus busy wrong.");
+        check_equal(dev_busy, '0');
+        i2c_master_stop(scl, sda);      -- give bus away
+        i2c_slave_check_start("1111100", '0', TIMEOUT, scl, sda);
+        check_errors;
+      elsif run("arbitration_lost_start_request") then
+        check_equal(bus_busy, '0');
+        check_equal(dev_busy, '0');
+
+        request_start("1110101", '1');
+        i2c_master_start("0000000", '1', scl, sda, exp_ack => '0');
+
+        check_errors(exp_arbitration => '1');
+        check_equal(bus_busy, '1', "Bus busy wrong.");
+        check_equal(dev_busy, '0');
+
+        request_start("1110101", '1', stop => '1');
+
+        i2c_master_transmit("11111111", scl, sda, exp_ack => '0');
+        i2c_master_stop(scl, sda);      -- give bus away
+        wait until falling_edge(clk);
+        wait until falling_edge(clk);
+        check_errors(exp_arbitration => '1');
+
+        i2c_slave_check_start("1110101", '1', TIMEOUT, scl, sda);
+        i2c_slave_transmit("11111111", TIMEOUT, scl, sda);
+        i2c_slave_check_stop(TIMEOUT, scl, sda);
+        rx_read_data("11111111", rx_confirm);
       end if;
     end loop;
 

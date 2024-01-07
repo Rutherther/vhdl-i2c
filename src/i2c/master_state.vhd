@@ -94,7 +94,8 @@ begin  -- architecture a1
   any_err <= curr_err_arbitration or curr_err_noack_data or curr_err_noack_address or curr_err_general;
   any_terminal_err <= curr_err_noack_data or curr_err_noack_address or curr_err_general;
   control_over_bus <= '1' when curr_state /= IDLE and curr_state /= BUS_BUSY else '0';
-  can_gen_cond <= '1' when curr_state = IDLE or ((curr_state = TRANSMITTING or curr_state = RECEIVING) and (waiting_for_data_i = '1' or tx_done_i = '1' or rx_done_i = '1')) else '0';
+  can_gen_cond <= '1' when (curr_state = IDLE and start_condition_i = '0' and stop_condition_i = '0') or
+                           ((curr_state = TRANSMITTING or curr_state = RECEIVING) and (waiting_for_data_i = '1' or tx_done_i = '1' or rx_done_i = '1')) else '0';
 
   req_scl_continuous_o <= '1' when curr_state = GENERATING_ADDRESS or
                           curr_state = TRANSMITTING or curr_state = RECEIVING else '0';
@@ -161,9 +162,9 @@ begin  -- architecture a1
     next_state <= curr_state;
 
     if curr_state = IDLE then
-      -- not much to do,
-      -- condition for start
-      -- is at the end
+      if start_condition_i = '1' then
+        next_state <= BUS_BUSY;
+      end if;
     elsif curr_state = GENERATING_START then
       if start_condition_i = '1' then
         next_state <= GENERATED_START;
@@ -178,7 +179,7 @@ begin  -- architecture a1
       elsif req_cond_done_i = '1' then
         next_state <= GENERATING_ADDRESS;
       elsif condition_early_i = '1' then
-        next_state <= IDLE;
+        next_state <= BUS_BUSY;
       end if;
     elsif curr_state = GENERATING_ADDRESS then
       if any_terminal_err = '1' then
@@ -219,6 +220,10 @@ begin  -- architecture a1
       -- This state should not be possible
       -- if the components in i2c master are
       -- behaving correctly
+    elsif curr_state = BUS_BUSY then
+      if stop_condition_i = '1' then
+        next_state <= IDLE;
+      end if;
     end if;
 
     if can_gen_cond = '1' then
@@ -233,8 +238,8 @@ begin  -- architecture a1
       end if;
     end if;
 
-    if curr_err_arbitration = '1' then
-      next_state <= IDLE;
+    if curr_err_arbitration = '1' and (curr_state = GENERATING_ADDRESS or curr_state = TRANSMITTING) then
+      next_state <= BUS_BUSY;
     end if;
   end process set_next_state;
 
