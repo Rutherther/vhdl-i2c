@@ -162,11 +162,15 @@ begin  -- architecture tb
 
         wait until falling_edge(clk);
 
-        scl_fall;
+        scl <= '0';
+
+        wait until falling_edge(clk);
+        wait until rising_edge(clk);
+        check_equal(done, '1', "Not reporting done");
+        wait until falling_edge(clk);
 
         sda <= 'Z';
 
-        check_equal(done, '1', "Not reporting done");
 
       end procedure validate_address_gen;
   begin  -- process main
