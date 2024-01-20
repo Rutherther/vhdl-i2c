@@ -1,0 +1,9 @@
+citeproc: true
+output-file: report.pdf
+pdf-engine: tectonic
+filters:
+  - citeproc
+  - pandoc-svg.py
+input-files:
+  - index.md
+

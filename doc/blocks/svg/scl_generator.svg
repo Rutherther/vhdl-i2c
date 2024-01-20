@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="16.7966cm" height="11.5cm">
+<style type="text/css" >
+	<![CDATA[
+	/* Text styles */
+	.label {
+		font-family: Arial;
+		font-size: 10pt;
+		font-weight: normal;
+	}
+
+	.entity {
+		font-family: Arial;
+		font-size: 12pt;
+		font-weight: bold;
+	}
+
+	.port {
+		font-family: Arial;
+		font-size: 12pt;
+		font-weight: normal;
+	}
+
+	.vector {
+		font-family: Arial;
+		font-size: 10pt;
+		font-weight: normal;
+	}
+
+	.generics {
+		font-family: Arial;
+		font-size: 10pt;
+		font-weight: normal;
+	}
+
+	/* Text alignment */
+	.right {
+		dominant-baseline: central;
+		text-anchor: end;
+	}
+
+	.left {
+		dominant-baseline: central;
+		text-anchor: start;
+	}
+
+	.center {
+		dominant-baseline: central;
+		text-anchor: middle;
+	}
+
+	/* Shape styles */
+	.entityBox {
+		stroke-width: 0.05cm;
+		stroke: #000000;
+		fill: #FFFFFF;
+	}
+
+	.portBox {
+		stroke-width: 0.00cm;
+		stroke: #FFF;
+		fill: #FFFFFF;
+	}
+
+	.labelBox {
+		stroke-width: 0.00cm;
+		stroke: #000000;
+		fill: #FFFFFF;
+	}
+
+	.vectorLength {
+		stroke-width: 0.00cm;
+		fill: #FFFFFF;
+	}
+
+	.genericsBox {
+		stroke-width: 0.02cm;
+		stroke: #BFBFBF;
+		fill: #F2F2F2;
+	}
+
+	.connector {
+		stroke-width: 0.025cm;
+		stroke: #000000;
+		fill: #FFFFFF;
+	}
+
+	]]>
+</style>
+<g>
+<rect class="genericsBox" x="11.1087cm" y="0.5cm" width="5.18795cm" height="0.5cm" />
+<text class="generics" x="11.2337cm" y="0.875cm" >MIN_STABLE_CYCLES = 5</text>
+</g>
+<g>
+<rect class="labelBox" x="1.5cm" y="0cm" width="9.60868cm" height="1cm" />
+<text class="label center" x="6.30434cm" y="0.5cm" ></text>
+<rect class="entityBox" x="1.475cm" y="0.975cm" width="9.65868cm" height="9.05cm" />
+<text class="entity center" x="6.30434cm" y="1.5cm" >scl_generator</text>
+<rect class="portBox" x="1.5cm" y="2cm" width="4.80434cm" height="1cm" />
+<text class="port left" x="1.75cm" y="2.5cm" >scl_i</text>
+<line class="connector" x1="1.5cm" y1="2.5cm" x2="0.5cm" y2="2.5cm" />
+<rect class="portBox" x="1.5cm" y="3cm" width="4.80434cm" height="1cm" />
+<text class="port left" x="1.75cm" y="3.5cm" >scl_rising_i</text>
+<line class="connector" x1="1.5cm" y1="3.5cm" x2="0.5cm" y2="3.5cm" />
+<rect class="portBox" x="1.5cm" y="4cm" width="4.80434cm" height="1cm" />
+<text class="port left" x="1.75cm" y="4.5cm" >scl_falling_i</text>
+<line class="connector" x1="1.5cm" y1="4.5cm" x2="0.5cm" y2="4.5cm" />
+<rect class="portBox" x="1.5cm" y="5cm" width="4.80434cm" height="1cm" />
+<text class="port left" x="1.75cm" y="5.5cm" >gen_continuous_i</text>
+<line class="connector" x1="1.5cm" y1="5.5cm" x2="0.5cm" y2="5.5cm" />
+<rect class="portBox" x="1.5cm" y="6cm" width="4.80434cm" height="1cm" />
+<text class="port left" x="1.75cm" y="6.5cm" >gen_rising_i</text>
+<line class="connector" x1="1.5cm" y1="6.5cm" x2="0.5cm" y2="6.5cm" />
+<rect class="portBox" x="1.5cm" y="7cm" width="4.80434cm" height="1cm" />
+<text class="port left" x="1.75cm" y="7.5cm" >gen_falling_i</text>
+<line class="connector" x1="1.5cm" y1="7.5cm" x2="0.5cm" y2="7.5cm" />
+<rect class="portBox" x="6.30434cm" y="2cm" width="4.80434cm" height="1cm" />
+<text class="port right" x="10.8587cm" y="2.5cm" >scl_enable_o</text>
+<line class="connector" x1="11.1087cm" y1="2.5cm" x2="12.1087cm" y2="2.5cm" />
+<rect class="portBox" x="6.30434cm" y="3cm" width="4.80434cm" height="1cm" />
+<text class="port right" x="10.8587cm" y="3.5cm" >cannot_comply_o</text>
+<line class="connector" x1="11.1087cm" y1="3.5cm" x2="12.1087cm" y2="3.5cm" />
+<rect class="portBox" x="1.5cm" y="9cm" width="9.60868cm" height="1cm" />
+<text class="port center" x="6.30434cm" y="9.5cm" >rst_in</text>
+<line class="connector" x1="6.30434cm" y1="10cm" x2="6.30434cm" y2="11cm" />
+<circle class="connector" cx="6.30434cm" cy="10.175cm" r="0.125cm" />
+<rect class="portBox" x="1.5cm" y="8cm" width="4.80434cm" height="1cm" />
+<text class="port left" x="1.75cm" y="8.5cm" >clk_i</text>
+<line class="connector" x1="0.5cm" y1="8.5cm" x2="1.5cm" y2="8.5cm" />
+<line class="connector" x1="1.5cm" y1="8.65cm" x2="1.7cm" y2="8.5cm" />
+<line class="connector" x1="1.5cm" y1="8.35cm" x2="1.7cm" y2="8.5cm" />
+</g>
+</svg>
