@@ -51,21 +51,57 @@
         meta.mainProgram = "nvc";
         paths = [
           pkgs.ghdl
-          pkgs.nvc
+          # pkgs.nvc
         ];
       };
     in {
       packages.${system}.default = vhdl-toolchain;
 
-      devShells.${system}.default = pkgs.mkShell {
-        packages = [
-          vhdl-toolchain
-          pkgs.vhdl-ls
-          pkgs.gtkwave
-          python-env
-        ];
+      devShells.${system} = {
+        docs = pkgs.mkShell {
+          packages = [
+            pkgs.pandoc
+            pkgs.tectonic
+            pkgs.inkscape
+            (pkgs.python3.withPackages(ps: [
+              ps.pandocfilters
+            ]))
+          ];
+        };
 
-        VUNIT_SIMULATOR = "nvc";
+        default = pkgs.mkShell {
+          packages = [
+            vhdl-toolchain
+
+            (pkgs.rustPlatform.buildRustPackage rec {
+                pname = "vhdl-ls";
+                version = "0.77.0-patched";
+
+                src = pkgs.fetchFromGitHub {
+                  owner = "Rutherther";
+                  repo = "rust_hdl";
+                  rev = "return-new-line";
+                  hash = "sha256-EYG6Rycnq9unTTVk9Iy6ivnbr8sT1U7vnNGnnZefSqk=";
+                };
+
+                cargoHash = "sha256-YkeepkJLq95e9X2v+1AxMBmT0q4ARJXA1WB89/KmTcY=";
+
+                postPatch = ''
+                  substituteInPlace vhdl_lang/src/config.rs \
+                    --replace /usr/lib $out/lib
+                '';
+
+                postInstall = ''
+                  mkdir -p $out/lib/rust_hdl
+                  cp -r vhdl_libraries $out/lib/rust_hdl
+                '';
+            })
+            pkgs.gtkwave
+            python-env
+          ];
+
+          VUNIT_SIMULATOR = "nvc";
+        };
       };
     };
 }
