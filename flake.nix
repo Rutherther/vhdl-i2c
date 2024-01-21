@@ -17,7 +17,7 @@
       };
       inherit (poetry2nix.lib.mkPoetry2Nix {
         inherit pkgs;
-      }) mkPoetryPackages defaultPoetryOverrides;
+      }) mkPoetryPackages mkPoetryScriptsPackage mkPoetryApplication defaultPoetryOverrides;
 
       python-env = pkgs.python311.withPackages(ps: [
         (ps.buildPythonPackage rec {
@@ -59,13 +59,34 @@
 
       devShells.${system} = {
         docs = pkgs.mkShell {
-          packages = [
+          packages =  let
+            pandoc-latex-environment = pkgs.stdenv.mkDerivation rec {
+              pname = "pandoc_latex_environment";
+              version = "1.1.6.2";
+
+              src = pkgs.fetchPypi {
+                inherit pname version;
+                hash = "sha256-61L0oYzXRFHMgTmWRJtCuqGDzaqhQfaQEBsCp7Rx+5c=";
+              };
+
+              installPhase = ''
+                install -Dm755 pandoc_latex_environment.py $out/bin/pandoc-latex-environment
+              '';
+
+              propagatedBuildInputs = [
+                (pkgs.python3.withPackages(ps: [
+                  ps.panflute
+                ]))
+              ];
+            };
+        in [
             pkgs.pandoc
             pkgs.tectonic
             pkgs.inkscape
             (pkgs.python3.withPackages(ps: [
               ps.pandocfilters
             ]))
+            pandoc-latex-environment
           ];
         };
 

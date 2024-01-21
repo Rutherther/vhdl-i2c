@@ -4,6 +4,7 @@ pdf-engine: tectonic
 filters:
   - citeproc
   - pandoc-svg.py
+  - pandoc-latex-environment
 input-files:
   - index.md
 
