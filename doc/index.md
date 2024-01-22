@@ -9,7 +9,7 @@ defaults:
 csl: bib.csl
 references:
   - type: incollection
-    id: i2c
+    id: i2c-spec
     title: "I2C-bus specification and user manual"
     author: "NXP"
     URL: https://www.nxp.com/docs/en/user-guide/UM10204.pdf
@@ -25,6 +25,8 @@ header-includes:
 - |
   ```{=latex}
   \usepackage{awesomebox}
+  \usepackage{pdflscape}
+  \usepackage{rotating}
   ```
 pandoc-latex-environment:
   noteblock: [note]
@@ -41,7 +43,7 @@ and not only in simulation. The master will be tested by showing three
 numbers as a counter on SSD1306 with I2C interface.
 
 I2C might be used for communication with multiple devices. It supports
-up to 3.4 Mbps speeds (High-speed mode). [-@i2c]
+up to 3.4 Mbps speeds (High-speed mode). [-@i2c-spec]
 That is sufficient for many applications. 
 I2C is used often, most microcontrollers include
 I2C hardware support as well.
@@ -82,6 +84,26 @@ Inputs have ``_i`` suffix, whereas outputs have ``_o`` suffix.
 When an input or output is active low, it's suffix will include ``n`` at the end.
 :::
 
+## Simulation
+
+For simulating, [VUnit](https://vunit.github.io/) framework has been used.
+It comes with a Python library that makes it easy to run the testbenches.
+The starting script is located in the root of the project, and called ``run.py``.
+It also comes with a VHDL library that adds some enhancements for the testing and
+communication with the Python side.
+
+All non-trivial entities were tested in simulation with various use cases.
+Every entity was tested by itself, and then, tests of the top level entities were performed
+as well. RTL I2C master has been tested by having a simple behavioral I2C slave implemented.
+RTL I2C slave by having simple I2C master implemented.
+
+All of the tests are checking if the result is correct by themselves. It's thus not required
+to go into the waves and check as a person. This means it's possible to make some changes,
+and check whether the changes have broken something very fast.
+
+The libraries for simulation include ``_tb`` suffix. There is a testbench library for every
+design library.
+
 ## SSD1306 display counter
 The SSD1306 display is a 128x64 display
 that supports various interfacing methods such as I2C.
@@ -99,14 +121,33 @@ on the master device.
 
 See the following figure showing the setup with Basys 3 board with SSD1306 counter entity
 connected to the SSD1306.
+
 ![Basys 3 board connected to SSD1306 display with a counter running](./img/fpga-board-ssd1306.jpg)
 
 The top level entity consists of three main entities. One of those is for a BCD counter,
-another for FSM for accessing the SSD1306 display, and the last for I2C master.
+another for FSM for controlling the SSD1306 display, and data that are being sent to it,
+and the last for I2C master.
 
 There are also three supporting entities, two open drain buffers
 for ``scl`` and ``sda``. The last one is for treating metastability of the
 reset.
+
+The following page shows the diagram of the top level entity for SSD1306 counter
+exported from Vivado.
+
+\pagenumbering{gobble}
+\begin{landscape}
+\begin{sidewaysfigure}[ht]
+\centering
+
+\hspace*{-5cm}
+\vspace{-3cm}
+\includegraphics[angle=180, width=850pt, trim=-5cm 0 0 -5cm]{./img/ssd1306_counter_schematic.pdf}
+\caption{SSD1306 counter top level diagram}
+
+\end{sidewaysfigure}
+\end{landscape}
+\pagenumbering{arabic}
 
 ## I2C
 The implementation consists of two separate top level entities,
@@ -118,13 +159,13 @@ Having these set to high means the line should be pulled down. There is also ``s
 An ``open_drain_buffer`` entity should be used
 to connect the input and enable output to the actual pad.
 
-Both master and slave entities share the rx and tx data interfaces.
+Both ``master`` and ``slave`` entities share the ``rx`` and ``tx`` data interfaces.
 The difference is that master has signals for requesting a new transaction,
 but the slave waits for a start condition to start receiving/transmitting.
 
 ### Entity ``master``
 The master entity is a top level entity for using the I2C
-core as a master. It connects all of the blocks for functioning
+core as a master. It connects all of the blocks for a functioning
 I2C master.
 
 The entity has three control inputs ``start``, ``stop``, and ``run``.
@@ -142,77 +183,94 @@ for instance, via generic argument. The generator always makes sure the
 
 Table: Ports of ``master`` entity
 
-| **Name**            | **Type**            | **Description**                                                    |
-|---------------------|---------------------|--------------------------------------------------------------------|
-| clk_i               | std_logic           | Clock input                                                        |
-| rst_in              | std_logic           | Asynchronous reset (active low)                                    |
-| slave_address_i     | std_logic_vector[7] | Address of the slave to choose                                     |
-| generate_ack_i      | std_logic           | Whether to generate acknowledges on received data                  |
-| expect_ack_i        | std_logic           | Whether to expect acknowledges on transmitted data                 |
-| rx_valid_o          | std_logic           | ``rx_data`` are valid                                              |
-| rx_data_o           | std_logic_vector[8] | Received data                                                      |
-| rx_confirm_i        | std_logic           | Confirm read of ``rx_data`` to fill with next data                 |
-| tx_ready_o          | std_logic           | ``tx_data`` may be received                                        |
-| tx_valid_i          | std_logic           | ``tx_data`` are valid                                              |
-| tx_data_i           | std_logic_vector[8] | Data to transmit                                                   |
-| tx_clear_buffer_i   | std_logic           | Clear transmit buffer (clear data that weren't sent)               |
-| err_noack_data_o    | std_logic           | Got NACK when transmitting                                         |
-| err_noack_address_o | std_logic           | Got NACK on first byte with address                                |
-| err_arbitration_o   | std_logic           | Got unexpected value on ``sda``                                    |
-| err_general_o       | std_logic           | Other errors, such as getting start condition unexpectedly         |
-| stop_i              | std_logic           | Generate stop condition when possible                              |
-| start_i             | std_logic           | Generate start condition when possible                             |
-| run_i               | std_logic           |                                                                    |
-| rw_i                | std_logic           | Read or write transaction (R = 1)                                  |
-| dev_busy_o          | std_logic           | Master device is currently busy                                    |
-| bus_busy_o          | std_logic           | Bus is busy (but master is not)                                    |
-| waiting_o           | std_logic           | Waiting for data on transmit or for read on receive if buffer full |
-| sda_i               | std_logic           | I2C ``sda`` line                                                   |
-| scl_i               | std_logic           | I2C ``scl`` line                                                   |
-| sda_enable_o        | std_logic           | Pull ``sda`` low                                                   |
-| scl_enable_o        | std_logic           | Pull ``scl`` low                                                   |
+| **Name**            | **Type**            | **Description**                                    |
+|------------------------|---------------------|----------------------------------------------------|
+| clk_i               | std_logic           | Clock input                                        |
+| rst_in              | std_logic           | Asynchronous reset (active low)                    |
+| slave_address_i     | std_logic_vector[7] | Address of the slave to choose                     |
+| generate_ack_i      | std_logic           | Whether to generate acknowledges on received data  |
+| expect_ack_i        | std_logic           | Whether to expect acknowledges on transmitted data |
+| rx_valid_o          | std_logic           | ``rx_data`` are valid                              |
+| rx_data_o           | std_logic_vector[8] | Received data                                      |
+| rx_confirm_i        | std_logic           | Confirm read of ``rx_data`` to receive next        |
+| tx_ready_o          | std_logic           | ``tx_data`` may be received                        |
+| tx_valid_i          | std_logic           | ``tx_data`` are valid                              |
+| tx_data_i           | std_logic_vector[8] | Data to transmit                                   |
+| tx_clear_buffer_i   | std_logic           | Clear transmit buffer (unsent data)                |
+| err_noack_data_o    | std_logic           | Got NACK when transmitting                         |
+| err_noack_address_o | std_logic           | Got NACK on first byte with address                |
+| err_arbitration_o   | std_logic           | Got unexpected value on ``sda``                    |
+| err_general_o       | std_logic           | Other errors, like unexpected start cond           |
+| stop_i              | std_logic           | Generate stop condition when possible              |
+| start_i             | std_logic           | Generate start condition when possible             |
+| run_i               | std_logic           |                                                    |
+| rw_i                | std_logic           | Read or write transaction (R = 1)                  |
+| dev_busy_o          | std_logic           | Master device is currently busy                    |
+| bus_busy_o          | std_logic           | Bus is busy (but master is not)                    |
+| waiting_o           | std_logic           | Waiting for data on transmit or for read confirm   |
+| sda_i               | std_logic           | I2C ``sda`` line                                   |
+| scl_i               | std_logic           | I2C ``scl`` line                                   |
+| sda_enable_o        | std_logic           | Pull ``sda`` low                                   |
+| scl_enable_o        | std_logic           | Pull ``scl`` low                                   |
 
 Table: Generic arguments of ``master`` entity
 
-| **Name**              | **Type** | **Default value**                           |
-|-----------------------|----------|---------------------------------------------|
-| SCL_FALLING_DELAY     | natural  | How many clock cycles to wait               |
-|                       |          | after scl falling to set ``sda``            |
-| SCL_MIN_STABLE_CYCLES | natural  | Minimum clock cycles to keep ``scl`` stable |
+| **Name**                    | **Type** | **Default value**                           |
+|-----------------------------|----------|---------------------------------------------|
+| SCL_FALLING_DELAY           | natural  | How many clock cycles to wait               |
+|                             |          | after scl falling to set ``sda``            |
+| SCL_MIN_STABLE_CYCLES       | natural  | Minimum clock cycles to keep ``scl`` stable |
+
+The following page contains the diagram of the I2C ``master`` entity
+along with all components.
+
+\pagenumbering{gobble}
+\begin{landscape}
+\begin{sidewaysfigure}[ht]
+\centering
+
+\hspace*{-5cm}
+\vspace{2cm}
+\includegraphics[angle=180, width=700pt, trim=0 0 0 0]{./img/i2c_master_schematic.pdf}
+\caption{SSD1306 counter top level diagram}
+
+\end{sidewaysfigure}
+\end{landscape}
+\pagenumbering{arabic}
 
 ### Entity ``slave``
 Slave entity is a top level for I2C slave.
 
-It outputs the current state upon receiving _commands_ from the master.
+It outputs the current state (such as bus busy, device busy, r/w) upon receiving _commands_ from the master.
 
 Table: Ports of ``slave`` entity
 
-| **Name**          | **Type**            | **Description**                                                    |
-|-------------------|---------------------|--------------------------------------------------------------------|
-| clk_i             | std_logic           | Clock input                                                        |
-| rst_in            | std_logic           | Asynchronous reset (active low)                                    |
-| address_i         | std_logic_vector[7] | Address of the slave                                               |
-| generate_ack_i    | std_logic           | Whether to generate ack on every read                              |
-| expect_ack_i      | std_logic           | Whether to expect acknowledges on transmitted data                 |
-| rx_valid_o        | std_logic           | ``rx_data`` are valid                                              |
-| rx_data_o         | std_logic_vector[8] | Received data                                                      |
-| rx_confirm_i      | std_logic           | Confirm data of ``rx_data`` to fill with next data                 |
-| rx_stretch_i      | std_logic           | Allow stretching on receiving (when read buffer full)              |
-| tx_ready_o        | std_logic           | ``tx_data`` may be received                                        |
-| tx_valid_i        | std_logic           | ``tx_data`` are valid                                              |
-| tx_data_i         | std_logic_vector[8] | Data to transmit                                                   |
-| tx_stretch_i      | std_logic           | Allow stretching on transmitting (when data missing)               |
-| tx_clear_buffer_i | std_logic           | Clear transmit buffer (clear data that weren't sent)               |
-| err_noack_o       | std_logic           | Got NACK when transmitting                                         |
-| err_sda_o         | std_logic           | Got unexpected value on ``sda``                                    |
-| rw_o              | std_logic           | Read or write transaction (R = 1)                                  |
-| dev_busy_o        | std_logic           | Master device is currently busy                                    |
-| bus_busy_o        | std_logic           | Bus is busy (but master is not)                                    |
-| waiting_o         | std_logic           | Waiting for data on transmit or for read on receive if buffer full |
-| sda_i             | std_logic           | I2C ``sda`` line                                                   |
-| scl_i             | std_logic           | I2C ``scl`` line                                                   |
-| sda_enable_o      | std_logic           | Pull ``sda`` low                                                   |
-| scl_enable_o      | std_logic           | Pull ``scl`` low                                                   |
+| **Name**          | **Type**            | **Description**                                    |
+|-------------------|---------------------|----------------------------------------------------|
+| clk_i             | std_logic           | Clock input                                        |
+| rst_in            | std_logic           | Asynchronous reset (active low)                    |
+| address_i         | std_logic_vector[7] | Address of the slave                               |
+| generate_ack_i    | std_logic           | Whether to generate ack on every read              |
+| expect_ack_i      | std_logic           | Whether to expect acknowledges on transmitted data |
+| rx_valid_o        | std_logic           | ``rx_data`` are valid                              |
+| rx_data_o         | std_logic_vector[8] | Received data                                      |
+| rx_confirm_i      | std_logic           | Confirm data of ``rx_data`` to receive next        |
+| rx_stretch_i      | std_logic           | Allow stretching when buffer full                  |
+| tx_ready_o        | std_logic           | ``tx_data`` may be received                        |
+| tx_valid_i        | std_logic           | ``tx_data`` are valid                              |
+| tx_data_i         | std_logic_vector[8] | Data to transmit                                   |
+| tx_stretch_i      | std_logic           | Allow stretching on transmitting (no data)         |
+| tx_clear_buffer_i | std_logic           | Clear transmit buffer (unsent data)                |
+| err_noack_o       | std_logic           | Got NACK when transmitting                         |
+| err_sda_o         | std_logic           | Got unexpected value on ``sda``                    |
+| rw_o              | std_logic           | Read or write transaction (R = 1)                  |
+| dev_busy_o        | std_logic           | Master device is currently busy                    |
+| bus_busy_o        | std_logic           | Bus is busy (but master is not)                    |
+| waiting_o         | std_logic           | Waiting for data on transmit or for read confirm   |
+| sda_i             | std_logic           | I2C ``sda`` line                                   |
+| scl_i             | std_logic           | I2C ``scl`` line                                   |
+| sda_enable_o      | std_logic           | Pull ``sda`` low                                   |
+| scl_enable_o      | std_logic           | Pull ``scl`` low                                   |
 
 Table: Generic arguments of ``slave`` entity
 
@@ -221,9 +279,26 @@ Table: Generic arguments of ``slave`` entity
 | SCL_FALLING_DELAY | natural  | How many clock cycles to wait after |
 |                   |          | scl falling to set ``sda``          |
 
+The following page contains the diagram of the I2C ``slave`` entity
+along with all components.
+
+\pagenumbering{gobble}
+\begin{landscape}
+\begin{sidewaysfigure}[ht]
+\centering
+
+\hspace*{-5cm}
+\vspace{2cm}
+\includegraphics[angle=180, width=700pt, trim=0 0 0 0]{./img/i2c_slave_schematic.pdf}
+\caption{SSD1306 counter top level diagram}
+
+\end{sidewaysfigure}
+\end{landscape}
+\pagenumbering{arabic}
+
 ### Common
 All of the blocks responsible for receiving or sending data
-should get the``scl`` state from the input going to the FPGA/ASIC,
+should get the ``scl`` state from the input going to the FPGA/ASIC,
 the same goes for ``sda``.
 This makes sure that features such as scl stretching or arbitration
 are supported. If scl from ``scl_generator`` were to be used, there
@@ -231,16 +306,19 @@ would be no possibility to detect either one of those.
 
 :::note
 Some of the entities accept delayed falling pulse of ``scl``.
-This is to make sure ``sda`` is changed AFTER ``scl`` is indeed
-low. If ``sda`` was changed right away, it's possible there would
+This is to make sure ``sda`` is changed after ``scl`` is indeed
+low. If ``sda`` were to be changed right away, it's possible there would
 be a device that would detect start or stop condition when
-there is no condition.
+there is actually no condition.
 :::
 
 #### Entity ``address_generator``
 Address generator is responsible for sending
-address upon requested. It's used in the I2C master
+address when requested. It's used in the I2C master
 to select a slave. Currently it supports only 7 bit addresses.
+It checks ACK as well, and outputs ``noack_o`` for NACK.
+It also checks the ``sda`` level when sending to detect
+arbitration loss.
 
 Table: Ports of ``address_generator`` entity
 
@@ -265,6 +343,7 @@ Table: Ports of ``address_generator`` entity
 Address detector looks at the received data to check
 if the address matches the address of the slave.
 Currently it supports only 7 bit addresses.
+It supports sending ACK after address received.
 
 Table: Ports of ``address_detector`` entity
 
@@ -291,13 +370,16 @@ what ``address_detector`` is for.
 
 The entity supports ``scl`` stretching. When the data are not yet
 read (that should be signaled by ``confirm_read_i``), it will stretch
-the ``scl`` to prevent loss of data.
+the ``scl`` to prevent loss of data. The data are stored in a separate buffer
+when full data are received. This makes it possible to start receiving next byte
+immediately without having to wait for read from another entity. However, if the
+receive buffer gets full with second byte, there is need for the stretching.
 For master, this means ``scl`` is not generated, for slave it
 means it's held down even though the master is trying to let go
 to get high level.
 
-The entity is also responsible for acknowledging the received data.
-All data are acknowledged.
+The entity is also responsible for acknowledging the received data when
+``generate_ack_i`` is set.
 
 Table: Ports of ``rx`` entity
 
@@ -320,20 +402,20 @@ Table: Ports of ``rx`` entity
 | confirm_read_i        | std_logic           | Confirm data were read               |
 
 #### Entity ``tx``
-Receiver entity is responsible for transmitting data to the
+Transmitter entity is responsible for transmitting data to the
 data bit line (``sda``), and for storing the data to be sent next.
 It's not meant to be used as generator/sender of the address, that is
 what ``address_generator`` is for.
 
 The entity supports ``scl`` stretching. When there are not any
 data to be sent delivered yet, it will stretch
-the ``scl`` to prevent loss of data.
+the ``scl``.
 For master, this means ``scl`` is not generated, for slave it
 means it's held down even though the master is trying to let go
 to get high level.
 
 If wrong level is detected on the ``sda`` upon rising edge of ``scl``,
-the entity signals 
+the entity signals that in ``unexpected_sda_o``.
 
 The entity is also responsible for verifying acknowledge at the right time,
 and signaling that no acknowledge has been received.
@@ -361,9 +443,12 @@ Table: Ports of ``tx`` entity
 
 #### Entity ``scl_generator``
 Scl generator generates the ``scl`` while making sure
-to keep the signal high or low for at least specified number of cycles.
+to keep the signal high or low (stable) for at least specified number of cycles.
 It may send a signal when the ``scl`` cannot be set to high level,
 that could signal a slave pulling down the line.
+
+It supports single requests for falling or rising edges (used for startstop condition generation)
+as well as continuous (used for transmit/receive).
 
 Table: Ports of ``scl_generator`` entity
 
@@ -384,7 +469,7 @@ Table: Generic arguments of ``scl_generator`` entity
 
 | **Name**          | **Type** | **Description**                |
 |-------------------|----------|--------------------------------|
-| MIN_STABLE_CYCLES | natural  | How many clock cycles to keep ``scl`` on stable |
+| MIN_STABLE_CYCLES | natural  | How many clock cycles to keep ``scl`` stable |
 
 #### Entity ``startstop_condition_detector``
 This entity detects either start or stop condition.
@@ -443,19 +528,20 @@ Table: Ports of ``startstop_condition_generator`` entity
 This entity is a FSM for the ``master`` entity.
 It commands what should be done, such as generating
 the address, receiving data, transmitting data, etc.
-It also detects errors and in case of one, outputs it.
+It also decides when to go to error state, and outputs an error
+that is propagated through the ``master`` entity.
 The errors are cleared upon next start request so that
 it might be validated if there has been a new error for the
 start request.
 
 Inputs and outputs from other entities, should be explained by other entities well already.
 
-
 #### Entity ``slave_state`` 
 This entity is a FSM for the ``slave`` entity.
 It commands what should be done, such as detecting
 the address, receiving data, transmitting data, etc.
-It also detects errors and in case of one, outputs it.
+It also decides when to go to error state, and outputs an error
+that is propagated through the ``slave`` entity.
 The errors are cleared upon next start condition.
 
 Inputs and outputs from other entities, should be explained by other entities well already.
@@ -476,19 +562,20 @@ Inputs and outputs from other entities, should be explained by other entities we
 
 # Conclusion
 Both master and slave have been verified to be working in simulation and on an FPGA board.
-All found issues were found, and when the issues were found on the FPGA, but not in simulation,
-a new testcase has been added to make sure the behavior is verified if there were any changes made.
+All found issues were solved, and when the issues were found on the FPGA, but not in simulation,
+a new testcase has been added to make sure the behavior is verified again if there were any changes made.
 
 The components correctly monitor the bus even when they are not being used,
 and output if the bus is busy or not. There are errors reported
-in case something went wrong (cannot set ``sda``, arbitration lost, etc.).
+in case something went wrong (wrong ``sda`` level, arbitration lost, etc.).
 This should make the I2C components usable in real applications even if more masters
 are incorporated on the bus.
 
 There are some things that could be added or changed in the future, such as:
+
 - 10 bit addressing support
 - More error states (timeout)
-- Multiple possible ``scl`` frequencies
+- Multiple possible ``scl`` frequencies switchable after synthesis
 - Adding behavioral I2C master and I2C slave modules for simulation
 
 The 10 bit addressing is not currently supported, although its support should not be hard
@@ -498,22 +585,21 @@ is received instead of the first one.
 
 So far if the scl generator entity detects an error (that it cannot get the line high),
 it will produce a signal to say that, but this signal is not utilized in the FSM entity
-for the master. That means if the line stays low indefinitely, the master will become stuck
-without notifying the application about a possible problem. One of the slave devices could
-be erroneously holding down the line.
+for the master. That means if the line stays low indefinitely (possibly due to a failing slave device),
+the master will become stuck without notifying the application about a possible problem.
 
 The ``master`` entity supports only one frequency for ``scl`` for now.
-That could be changed by passing in an array of values instead of one generic argument.
-Then it could be chosen by index, and changed in runtime when the index would be set
-as an input port.
+That could be changed by passing in an array of values instead of one generic argument
+for saying how many cycles to keep ``scl`` stable.
+Then it could be chosen by an input port that would act as an index.
 
 The simulation currently uses blocking procedures for testing.
 These procedures are called from the top level simulation entities.
 This makes it hard to test some of the features such as verifying whether
-error signal became high at the correct``scl`` edge.
+error signal became high at the correct ``scl`` edge.
 It's also quite hard to test having multiple devices on the bus sending data simultaneously.
 That could come in handy to test arbitration.
-Both of these could be overcome by adding i2c behavioral modules, and instead of generating
+Both of these could be overcome by adding I2C behavioral modules, and instead of generating
 the ``scl`` and ``sda`` from the top level testing entity, they would be generated
 by these behavioral models.
 The top level entity would just notify the behavioral models to start generating or expect the
