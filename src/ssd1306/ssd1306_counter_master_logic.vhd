@@ -18,6 +18,9 @@ entity ssd1306_counter_master_logic is
 
     count_i : in std_logic_vector(DIGITS*4 - 1 downto 0);
 
+    master_start_o : out std_logic;
+    master_stop_o : out std_logic;
+
     tx_valid_o : out std_logic;
     tx_ready_i : in std_logic;
     tx_data_o : out std_logic_vector(7 downto 0);
@@ -32,8 +35,6 @@ entity ssd1306_counter_master_logic is
 end entity ssd1306_counter_master_logic;
 
 architecture a1 of ssd1306_counter_master_logic is
-  signal master_start, master_stop : std_logic;
-
   type state_t is (IDLE, INIT_DISPLAY, INIT_ADDRESSING_MODE, ZERO_OUT_RAM, SET_ADR_ZERO, DIGIT_N, SEC_DELAY);
   signal curr_state : state_t;
   signal next_state : state_t;
@@ -86,8 +87,8 @@ begin  -- architecture a1
 
   digit_data <= ssd1306_bcd_digit_data(count_i(((DIGITS - 1 - curr_digit) + 1) * 4 - 1 downto (DIGITS - 1 - curr_digit) * 4));
 
-  master_start <= '1' when curr_substate = START else '0';
-  master_stop <= '1' when curr_substate = STOP else '0';
+  master_start_o <= '1' when curr_substate = START else '0';
+  master_stop_o <= '1' when curr_substate = STOP else '0';
 
   set_next_state: process (all) is
   begin  -- process set_next_state
@@ -123,6 +124,10 @@ begin  -- architecture a1
 
     if any_err_i = '1' then
       next_state <= IDLE;
+    end if;
+    
+    if start_i = '1' then
+        next_state <= IDLE;
     end if;
   end process set_next_state;
 

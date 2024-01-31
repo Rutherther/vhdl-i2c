@@ -45,6 +45,7 @@ architecture a1 of ssd1306_counter is
 
   signal rst_n : std_logic;
   signal rst_sync : std_logic;
+  signal i2c_rst_n : std_logic;
 
   signal i2c_clk : std_logic;
 
@@ -86,23 +87,25 @@ begin  -- architecture a+
   err_general_o <= err_general;
   any_err <= err_general or err_arbitration or err_noack_address or err_noack_data;
 
-  counter_master_logic: entity work.ssd1306_counter_master_logic
+  counter_master_logic : entity work.ssd1306_counter_master_logic
     generic map (
       DIGITS       => DIGITS,
       I2C_CLK_FREQ => I2C_CLK_FREQ)
     port map (
-      clk_i => i2c_clk,
-      rst_in => rst_n,
-      start_i => start_i,
-      count_i => count,
-      tx_valid_o => tx_valid,
-      tx_ready_i => tx_ready,
-      tx_data_o => tx_data,
-      dev_busy_i => dev_busy,
-      waiting_i => waiting,
-      any_err_i => any_err,
-      state_o    => state_o,
-      substate_o => substate_o);
+      clk_i          => i2c_clk,
+      rst_in         => rst_n,
+      start_i        => start_i,
+      count_i        => count,
+      master_start_o => master_start,
+      master_stop_o  => master_stop,
+      tx_valid_o     => tx_valid,
+      tx_ready_i     => tx_ready,
+      tx_data_o      => tx_data,
+      dev_busy_i     => dev_busy,
+      waiting_i      => waiting,
+      any_err_i      => any_err,
+      state_o        => state_o,
+      substate_o     => substate_o);
 
   counter: entity utils.counter
     generic map (
@@ -123,13 +126,15 @@ begin  -- architecture a+
       clk_i    => clk_i,
       clk_o    => i2c_clk);
 
+  i2c_rst_n <= rst_n and not start_i;
+
   i2c_master: entity i2c.master
     generic map (
       SCL_FALLING_DELAY     => DELAY,
       SCL_MIN_STABLE_CYCLES => SCL_MIN_STABLE_CYCLES)
     port map (
       clk_i               => i2c_clk,
-      rst_in              => rst_n,
+      rst_in              => i2c_rst_n,
 --
       slave_address_i     => ADDRESS,
 --
