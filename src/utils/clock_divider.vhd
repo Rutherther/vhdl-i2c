@@ -18,7 +18,7 @@ architecture a1 of clock_divider is
   signal curr_count : integer range 0 to MAX - 1;
   signal next_count : integer range 0 to MAX - 1;
 
-  signal gen_clk : std_logic;
+  signal gen_clk : std_logic := '0';
 begin  -- architecture a1
   keep_max_freq: if IN_FREQ = OUT_FREQ generate
     clk_o <= clk_i;
