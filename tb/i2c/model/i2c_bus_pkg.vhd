@@ -29,85 +29,108 @@ package i2c_bus_pkg is
   constant check_data_msg : msg_type_t := new_msg_type("check data");
   constant check_data_clocks_msg : msg_type_t := new_msg_type("check data and gen clocks");
 
-  constant wait_until_idle : msg_type_t := new_msg_type("wait until idle");
+  constant wait_until_idle_msg : msg_type_t := new_msg_type("wait until idle");
 
   impure function get_actor (
     constant inst_name : string)
     return actor_t;
 
   procedure free_bus (
+    signal net : inout network_t;
     constant actor : in actor_t);
 
   procedure set_scl_frequency (
+    signal net : inout network_t;
     constant frequency : in real;
     constant actor : in actor_t);
 
   procedure gen_start_cond (
+    signal net : inout network_t;
     constant timeout : in time;
     constant actor : in actor_t);
 
   procedure gen_stop_cond (
+    signal net : inout network_t;
     constant timeout : in time;
     constant actor : in actor_t);
 
   procedure gen_clocks (
+    signal net : inout network_t;
     constant times : in natural;
     constant timeout : in time;
     constant actor : in actor_t);
 
   procedure send_data (
+    signal net : inout network_t;
     constant data : in std_logic_vector;
     constant timeout : in time;
     constant actor : in actor_t);
 
   procedure send_ack (
+    signal net : inout network_t;
     constant timeout : in time;
     constant actor : in actor_t);
 
   procedure send_ack_and_clock (
+    signal net : inout network_t;
     constant timeout : in time;
     constant actor : in actor_t);
 
   procedure send_data_and_clock (
+    signal net : inout network_t;
     constant data : in std_logic_vector;
     constant timeout : in time;
     constant actor : in actor_t);
 
   procedure wait_for_start_cond (
+    signal net : inout network_t;
     constant timeout : in time;
     constant actor : in actor_t);
 
   procedure wait_for_stop_cond (
+    signal net : inout network_t;
     constant timeout : in time;
     constant actor : in actor_t);
 
   procedure wait_for_clocks (
+    signal net : inout network_t;
     constant times : in natural;
     constant timeout : in time;
     constant actor : in actor_t);
 
   procedure check_data (
+    signal net : inout network_t;
     constant exp_data : in std_logic_vector;
     constant timeout : in time;
     constant actor : in actor_t);
 
   procedure check_data_gen_clock (
+    signal net : inout network_t;
     constant exp_data : in std_logic_vector;
     constant timeout : in time;
     constant actor : in actor_t);
 
   procedure check_ack_gen_clock (
+    signal net : inout network_t;
+    constant ack : in std_logic := '1';
     constant timeout : in time;
     constant actor : in actor_t);
 
   procedure check_ack (
+    signal net : inout network_t;
+    constant ack : in std_logic := '1';
     constant timeout : in time;
     constant actor : in actor_t);
 
   procedure set_auto_ack (
+    signal net : inout network_t;
     constant auto_ack : in boolean;
     constant address : in std_logic_vector(6 downto 0);
     constant bytes_count : in natural;
+    constant actor : in actor_t);
+
+  procedure wait_until_idle (
+    signal net : inout network_t;
     constant actor : in actor_t);
 
 end package i2c_bus_pkg;
@@ -122,6 +145,7 @@ package body i2c_bus_pkg is
   end function get_actor;
 
   procedure free_bus (
+    signal net : inout network_t;
     constant actor : in actor_t) is
     variable msg : msg_t := new_msg(free_bus_msg);
   begin
@@ -129,6 +153,7 @@ package body i2c_bus_pkg is
   end procedure free_bus;
 
   procedure set_scl_frequency (
+    signal net : inout network_t;
     constant frequency : in real;
     constant actor : in actor_t) is
     variable msg : msg_t := new_msg(set_scl_freq_msg);
@@ -138,6 +163,7 @@ package body i2c_bus_pkg is
   end procedure set_scl_frequency;
 
   procedure gen_start_cond (
+    signal net : inout network_t;
     constant timeout : in time;
     constant actor : in actor_t) is
     variable msg : msg_t := new_msg(gen_start_cond_msg);
@@ -147,6 +173,7 @@ package body i2c_bus_pkg is
   end procedure gen_start_cond;
 
   procedure gen_stop_cond (
+    signal net : inout network_t;
     constant timeout : in time;
     constant actor : in actor_t) is
     variable msg : msg_t := new_msg(gen_stop_cond_msg);
@@ -156,6 +183,7 @@ package body i2c_bus_pkg is
   end procedure gen_stop_cond;
 
   procedure gen_clocks (
+    signal net : inout network_t;
     constant times : in natural;
     constant timeout : in time;
     constant actor : in actor_t) is
@@ -167,6 +195,7 @@ package body i2c_bus_pkg is
   end procedure gen_clocks;
 
   procedure send_data (
+    signal net : inout network_t;
     constant data : in std_logic_vector;
     constant timeout : in time;
     constant actor : in actor_t) is
@@ -181,20 +210,23 @@ package body i2c_bus_pkg is
   end procedure send_data;
 
   procedure send_ack (
+    signal net : inout network_t;
     constant timeout : in time;
     constant actor : in actor_t) is
   begin
-    send_data("0", timeout, actor);
+    send_data(net, "0", timeout, actor);
   end procedure send_ack;
 
   procedure send_ack_and_clock (
+    signal net : inout network_t;
     constant timeout : in time;
     constant actor : in actor_t) is
   begin
-    send_data_and_clock("0", timeout, actor);
+    send_data_and_clock(net, "0", timeout, actor);
   end procedure send_ack_and_clock;
 
   procedure send_data_and_clock (
+    signal net : inout network_t;
     constant data : in std_logic_vector;
     constant timeout : in time;
     constant actor : in actor_t) is
@@ -209,6 +241,7 @@ package body i2c_bus_pkg is
   end procedure send_data_and_clock;
 
   procedure wait_for_start_cond (
+    signal net : inout network_t;
     constant timeout : in time;
     constant actor : in actor_t) is
     variable msg : msg_t := new_msg(wait_start_cond_msg);
@@ -218,6 +251,7 @@ package body i2c_bus_pkg is
   end procedure wait_for_start_cond;
 
   procedure wait_for_stop_cond (
+    signal net : inout network_t;
     constant timeout : in time;
     constant actor : in actor_t) is
     variable msg : msg_t := new_msg(wait_stop_cond_msg);
@@ -227,6 +261,7 @@ package body i2c_bus_pkg is
   end procedure wait_for_stop_cond;
 
   procedure wait_for_clocks (
+    signal net : inout network_t;
     constant times : in natural;
     constant timeout : in time;
     constant actor : in actor_t) is
@@ -238,6 +273,7 @@ package body i2c_bus_pkg is
   end procedure wait_for_clocks;
 
   procedure check_data (
+    signal net : inout network_t;
     constant exp_data : in std_logic_vector;
     constant timeout : in time;
     constant actor : in actor_t) is
@@ -252,6 +288,7 @@ package body i2c_bus_pkg is
   end procedure check_data;
 
   procedure check_data_gen_clock (
+    signal net : inout network_t;
     constant exp_data : in std_logic_vector;
     constant timeout : in time;
     constant actor : in actor_t) is
@@ -266,20 +303,27 @@ package body i2c_bus_pkg is
   end procedure check_data_gen_clock;
 
   procedure check_ack_gen_clock (
+    signal net : inout network_t;
+    constant ack : in std_logic := '1';
     constant timeout : in time;
     constant actor : in actor_t) is
+    variable v_vector : std_logic_vector(0 downto 0) := (0 => not ack);
   begin
-    check_data_gen_clock("0", timeout, actor);
+    check_data_gen_clock(net, v_vector, timeout, actor);
   end procedure check_ack_gen_clock;
 
   procedure check_ack (
+    signal net : inout network_t;
+    constant ack : in std_logic := '1';
     constant timeout : in time;
     constant actor : in actor_t) is
+    variable v_vector : std_logic_vector(0 downto 0) := (0 => not ack);
   begin
-    check_data("0", timeout, actor);
+    check_data(net, v_vector, timeout, actor);
   end procedure check_ack;
 
   procedure set_auto_ack (
+    signal net : inout network_t;
     constant auto_ack : in boolean;
     constant address : in std_logic_vector(6 downto 0);
     constant bytes_count : in natural;
@@ -291,5 +335,14 @@ package body i2c_bus_pkg is
     push(msg, bytes_count);
     send(net, actor, msg);
   end procedure set_auto_ack;
+
+  procedure wait_until_idle (
+    signal net : inout network_t;
+    constant actor : in actor_t) is
+    variable msg : msg_t := new_msg(wait_until_idle_msg);
+    variable ack : boolean;
+  begin
+    request(net, actor, msg, ack);
+  end procedure wait_until_idle;
 
 end package body i2c_bus_pkg;
