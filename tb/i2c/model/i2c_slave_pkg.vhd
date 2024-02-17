@@ -1,27 +1,3 @@
---- read(address, exp_data, timeout)
----   wait start
----   wait address
----   ack (if matching)
----   read data, check it
----   check ack on every byte
----   wait stop?
---- write(address, data, timeout)
----   wait start
----   wait address
----   ack (if matching)
----   write data, check ack
----   wait stop?
---- read_write(address, exp_data, data, timeout)
----   wait start
----   wait address
----   ack (if matcihng)
----   start matching bytes
----     ack every byte
----   wait start
----   wait address
----   ack (if matching)
----   write data, check ack
-
 library ieee;
 use ieee.std_logic_1164.all;
 
@@ -30,6 +6,10 @@ context vunit_lib.vunit_context;
 context vunit_lib.com_context;
 
 use work.i2c_bus_pkg;
+
+-- all procedures here take 0 simulation time
+-- call i2c_bus_pkg.wait_until_idle to wait
+-- until the operation is performed.
 
 package i2c_slave_pkg is
 

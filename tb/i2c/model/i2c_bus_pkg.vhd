@@ -5,6 +5,12 @@ library vunit_lib;
 context vunit_lib.vunit_context;
 context vunit_lib.com_context;
 
+-- except for wait_until_idle,
+-- the procedures take 0 simulation time.
+-- wait_until_idle will take time until all
+-- operations requested on the i2c were
+-- performed.
+
 package i2c_bus_pkg is
   constant free_bus_msg : msg_type_t := new_msg_type("free bus");
   constant set_scl_freq_msg : msg_type_t := new_msg_type("scl freq");
@@ -37,9 +43,11 @@ package i2c_bus_pkg is
     constant actor : in actor_t);
 
   procedure gen_start_cond (
+    constant timeout : in time;
     constant actor : in actor_t);
 
   procedure gen_stop_cond (
+    constant timeout : in time;
     constant actor : in actor_t);
 
   procedure gen_clocks (
@@ -130,16 +138,20 @@ package body i2c_bus_pkg is
   end procedure set_scl_frequency;
 
   procedure gen_start_cond (
+    constant timeout : in time;
     constant actor : in actor_t) is
     variable msg : msg_t := new_msg(gen_start_cond_msg);
   begin
+    push(msg, timeout);
     send(net, actor, msg);
   end procedure gen_start_cond;
 
   procedure gen_stop_cond (
+    constant timeout : in time;
     constant actor : in actor_t) is
     variable msg : msg_t := new_msg(gen_stop_cond_msg);
   begin
+    push(msg, timeout);
     send(net, actor, msg);
   end procedure gen_stop_cond;
 

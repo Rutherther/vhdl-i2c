@@ -7,6 +7,10 @@ context vunit_lib.com_context;
 
 use work.i2c_bus_pkg;
 
+-- all procedures here take 0 simulation time
+-- call i2c_bus_pkg.wait_until_idle to wait
+-- until the operation is performed.
+
 package i2c_master_pkg is
 
   procedure write (
