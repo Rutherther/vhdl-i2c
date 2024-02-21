@@ -6,6 +6,7 @@ from pathlib import Path
 vu = VUnit.from_argv(compile_builtins = False)
 
 vu.add_vhdl_builtins()
+vu.add_com()
 
 i2c_tb_lib = vu.add_library('i2c_tb')
 i2c_tb_lib.add_source_files(Path(__file__).parent / 'tb/i2c/**/*.vhd')
@@ -25,8 +26,8 @@ ssd1306_lib.add_source_files(Path(__file__).parent / 'tb/ssd1306/**/*.vhd')
 utils_lib = vu.add_library('utils')
 utils_lib.add_source_files(Path(__file__).parent / 'src/utils/**/*.vhd')
 
-utils_tb_lib = vu.add_library('utils_tb')
-utils_tb_lib.add_source_files(Path(__file__).parent / 'tb/utils/**/*.vhd')
+# utils_tb_lib = vu.add_library('utils_tb')
+# utils_tb_lib.add_source_files(Path(__file__).parent / 'tb/utils/**/*.vhd')
 
 i2c_lib = vu.add_library('i2c')
 i2c_lib.add_source_files(Path(__file__).parent / 'src/**/*.vhd')
