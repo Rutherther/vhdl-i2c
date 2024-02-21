@@ -336,7 +336,7 @@ begin  -- architecture behav
       error(logger, "Timed out when waiting for sda rising edge to generate a stop condition!");
     end if;
 
-    wait for s_scl_period / 4;
+    wait for s_scl_period / 2;
 
     info(logger, "Stop condition generated.");
 
