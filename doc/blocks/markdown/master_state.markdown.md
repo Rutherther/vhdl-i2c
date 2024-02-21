@@ -1,0 +1,37 @@
+| **Name**                 | **Type**  | **Description** |
+|--------------------------|-----------|-----------------|
+| clk_i                    | std_logic |                 |
+| rst_in                   | std_logic |                 |
+| rst_i2c_o                | std_logic |                 |
+| start_i                  | std_logic |                 |
+| stop_i                   | std_logic |                 |
+| run_i                    | std_logic |                 |
+| rw_i                     | std_logic |                 |
+| expect_ack_i             | std_logic |                 |
+| noack_address_i          | std_logic |                 |
+| noack_data_i             | std_logic |                 |
+| unexpected_sda_address_i | std_logic |                 |
+| unexpected_sda_data_i    | std_logic |                 |
+| condition_early_i        | std_logic |                 |
+| err_noack_address_o      | std_logic |                 |
+| err_noack_data_o         | std_logic |                 |
+| err_arbitration_o        | std_logic |                 |
+| err_general_o            | std_logic |                 |
+| start_condition_i        | std_logic |                 |
+| stop_condition_i         | std_logic |                 |
+| waiting_for_data_i       | std_logic |                 |
+| rx_done_i                | std_logic |                 |
+| tx_done_i                | std_logic |                 |
+| address_gen_start_o      | std_logic |                 |
+| address_gen_done_i       | std_logic |                 |
+| address_gen_store_o      | std_logic |                 |
+| req_start_o              | std_logic |                 |
+| req_stop_o               | std_logic |                 |
+| req_cond_done_i          | std_logic |                 |
+| req_scl_continuous_o     | std_logic |                 |
+| cond_gen_o               | std_logic |                 |
+| address_gen_o            | std_logic |                 |
+| receive_o                | std_logic |                 |
+| transmit_o               | std_logic |                 |
+| dev_busy_o               | std_logic |                 |
+| bus_busy_o               | std_logic |                 |

@@ -3,6 +3,9 @@ use ieee.std_logic_1164.all;
 
 library vunit_lib;
 context vunit_lib.vunit_context;
+context vunit_lib.com_context;
+
+use work.i2c_bus_pkg;
 
 library i2c;
 
@@ -15,12 +18,15 @@ end entity address_detector_tb;
 
 architecture tb of address_detector_tb is
   signal clk : std_logic := '0';
-  constant CLK_PERIOD : time := 10 ns;
+  constant CLK_PERIOD : time := 1 us;
+  constant SCL_FREQ : real := 100_000.0;
 
   signal rst_n : std_logic := '0';
 
-  signal scl_rising : std_logic := '0';
-  signal scl_falling : std_logic := '0';
+  signal dev_sda : std_logic;
+  signal scl_rising, scl_falling : std_logic := '0';
+
+  signal scl : std_logic;
   signal sda : std_logic;
 
   signal start : std_logic;
@@ -30,15 +36,24 @@ architecture tb of address_detector_tb is
 
   signal sda_enable : std_logic;
 
-  shared variable trigger_scl_pulse : std_logic := '0';
-  signal triggered_scl_pulse : std_logic := '0';
-  shared variable trigger_start : std_logic := '0';
-
   signal one : std_logic := '1';
+
+  constant bus_inst_name : string := "i2c_bus_mod";
+  constant bus_actor : actor_t := i2c_bus_pkg.get_actor(bus_inst_name);
+
+  constant monitor_inst_name : string := "monitor";
+  constant monitor_actor : actor_t := i2c_bus_pkg.get_actor(monitor_inst_name);
 begin  -- architecture tb
 
   clk <= not clk after CLK_PERIOD / 2;
   rst_n <= '1' after 2 * CLK_PERIOD;
+
+  sda <= 'H';
+  scl <= 'H';
+
+  sda <= '0' when sda_enable = '1' else 'Z';
+
+  dev_sda <= '1' when sda = 'H' else sda;
 
   uut : entity i2c.address_detector
     port map (
@@ -48,47 +63,36 @@ begin  -- architecture tb
       address_i             => address,
       scl_rising            => scl_rising,
       scl_falling_delayed_i => scl_falling,
-      sda_i                 => sda,
+      sda_i                 => dev_sda,
       sda_enable_o          => sda_enable,
       start_i               => start,
       rw_o                  => rw,
       success_o             => success,
       fail_o                => fail);
 
-  do_trigger_scl_pulse: process is
-  begin  -- process trigger_scl_pulse
-    wait until rising_edge(clk);
-    if trigger_scl_pulse = '1' then
-        scl_rising <= '1';
-        scl_falling <= '0';
-        wait until rising_edge(clk);
-        scl_rising <= '0';
-        wait until rising_edge(clk);
-        wait until rising_edge(clk);
-        scl_falling <= '1';
-        wait until rising_edge(clk);
-        scl_falling <= '0';
-        trigger_scl_pulse := '0';
+  bus_mod : entity work.i2c_bus_mod
+    generic map (
+      inst_name        => bus_inst_name,
+      default_scl_freq => SCL_FREQ)
+    port map (
+      sda_io        => sda,
+      scl_io        => scl,
 
-        wait until rising_edge(clk);
+      clk_i         => clk,
+      scl_falling_o => scl_falling,
+      scl_rising_o  => scl_rising);
 
-        triggered_scl_pulse <= '1';
-        wait for 0 ns;
-        triggered_scl_pulse <= '0';
-    end if;
-  end process do_trigger_scl_pulse;
+  -- monitor_mod : entity work.i2c_bus_mod
+  --   generic map (
+  --     inst_name        => monitor_inst_name,
+  --     default_scl_freq => SCL_FREQ)
+  --   port map (
+  --     sda_io        => sda,
+  --     scl_io        => scl,
 
-  do_trigger_start: process is
-  begin  -- process trigger_scl_pulse
-    wait until rising_edge(clk);
-    if trigger_start = '1' then
-        start <= '1';
-        wait until rising_edge(clk);
-        wait for 0 ns;
-        start <= '0';
-        trigger_start := '0';
-    end if;
-  end process do_trigger_start;
+  --     clk_i         => '0',
+  --     scl_falling_o => open,
+  --     scl_rising_o  => open);
 
   main: process is
   begin  -- process main
@@ -104,124 +108,36 @@ begin  -- architecture tb
         check_equal(success, '0');
         check_equal(fail, '0');
 
-        trigger_start := '1';
-        wait for 0 ns;
-        wait until falling_edge(start);
-        report "ah";
+        i2c_bus_pkg.gen_start_cond(net, 1 ms, bus_actor);
+        i2c_bus_pkg.send_data_and_clock(net, "11000110", 1 ms, bus_actor);
+        i2c_bus_pkg.check_ack_gen_clock(net, '1', 1 ms, bus_actor);
 
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-
-        sda <= 'X'; -- rw
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-
-        check_equal(sda_enable, '1');
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
+        start <= '1';
         wait until falling_edge(clk);
-        check_equal(sda_enable, '0');
+        start <= '0';
+
+        i2c_bus_pkg.wait_until_idle(net, bus_actor);
 
         check_equal(success, '1');
         check_equal(fail, '0');
+
+        i2c_bus_pkg.gen_stop_cond(net, 1 ms, bus_actor);
+        i2c_bus_pkg.wait_until_idle(net, bus_actor);
 
       elsif run("read") then
         address <= "1100011";
         check_equal(success, '0');
         check_equal(fail, '0');
 
-        trigger_start := '1';
-        wait until falling_edge(start);
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        wait until rising_edge(triggered_scl_pulse);
+        i2c_bus_pkg.gen_start_cond(net, 1 ms, bus_actor);
+        i2c_bus_pkg.send_data_and_clock(net, "11000111", 1 ms, bus_actor);
+        i2c_bus_pkg.check_ack_gen_clock(net, '1', 1 ms, bus_actor);
 
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        wait until rising_edge(triggered_scl_pulse);
+        start <= '1';
+        wait until falling_edge(clk);
+        start <= '0';
 
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '1'; -- rw
-        trigger_scl_pulse := '1';
-        wait until rising_edge(triggered_scl_pulse);
-
-        check_equal(sda_enable, '1');   -- ack
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
+        i2c_bus_pkg.wait_until_idle(net, bus_actor);
 
         check_equal(success, '1');
         check_equal(fail, '0');
@@ -231,234 +147,67 @@ begin  -- architecture tb
         check_equal(success, '0');
         check_equal(fail, '0');
 
-        trigger_start := '1';
-        wait until falling_edge(start);
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        wait until rising_edge(triggered_scl_pulse);
+        i2c_bus_pkg.gen_start_cond(net, 1 ms, bus_actor);
+        i2c_bus_pkg.send_data_and_clock(net, "11000110", 1 ms, bus_actor);
+        i2c_bus_pkg.check_ack_gen_clock(net, '1', 1 ms, bus_actor);
 
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        wait until rising_edge(triggered_scl_pulse);
+        start <= '1';
+        wait until falling_edge(clk);
+        start <= '0';
 
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '0'; -- rw
-        trigger_scl_pulse := '1';
-        wait until rising_edge(triggered_scl_pulse);
-
-
-        check_equal(sda_enable, '1');   -- ack
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
+        i2c_bus_pkg.wait_until_idle(net, bus_actor);
 
         check_equal(success, '1');
         check_equal(fail, '0');
         check_equal(rw, '0');
       elsif run("not_matching") then
-        address <= "1110011";
+        address <= "1100011";
         check_equal(success, '0');
         check_equal(fail, '0');
 
-        trigger_start := '1';
-        wait until falling_edge(start);
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
+        i2c_bus_pkg.gen_start_cond(net, 1 ms, bus_actor);
+        i2c_bus_pkg.send_data_and_clock(net, "11100011", 1 ms, bus_actor);
+        i2c_bus_pkg.check_ack_gen_clock(net, '0', 1 ms, bus_actor);
 
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
+        start <= '1';
+        wait until falling_edge(clk);
+        start <= '0';
 
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '1');
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '1');
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '1');
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '1');
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '1'; -- rw
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '1');
-        wait until rising_edge(triggered_scl_pulse);
-
+        i2c_bus_pkg.wait_until_idle(net, bus_actor);
 
         check_equal(success, '0');
         check_equal(fail, '1');
       elsif run("not_matching_then_matching") then
-        address <= "1110011";
-        check_equal(success, '0');
-        check_equal(fail, '0');
-
-        trigger_start := '1';
-        wait until falling_edge(start);
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '1');
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '1');
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '1');
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '1');
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '1'; -- rw
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '1');
-        wait until rising_edge(triggered_scl_pulse);
-
-
-        check_equal(success, '0');
-        check_equal(fail, '1');
-
-        wait until falling_edge(clk);
-
-        trigger_start := '1';
-
         address <= "1100011";
         check_equal(success, '0');
+        check_equal(fail, '0');
+
+        i2c_bus_pkg.gen_start_cond(net, 1 ms, bus_actor);
+        i2c_bus_pkg.send_data_and_clock(net, "11100011", 1 ms, bus_actor);
+        i2c_bus_pkg.check_ack_gen_clock(net, '0', 1 ms, bus_actor);
+        i2c_bus_pkg.gen_stop_cond(net, 1 ms, bus_actor);
+
+        start <= '1';
+        wait until rising_edge(clk);
+        wait until falling_edge(clk);
+        start <= '0';
+
+        i2c_bus_pkg.wait_until_idle(net, bus_actor);
+
+        check_equal(success, '0');
         check_equal(fail, '1');
 
-        trigger_start := '1';
-        wait until falling_edge(start);
+        i2c_bus_pkg.gen_start_cond(net, 1 ms, bus_actor);
+        i2c_bus_pkg.send_data_and_clock(net, "11000110", 1 ms, bus_actor);
+        i2c_bus_pkg.check_ack_gen_clock(net, '1', 1 ms, bus_actor);
+        i2c_bus_pkg.gen_stop_cond(net, 1 ms, bus_actor);
 
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
+        start <= '1';
+        wait until rising_edge(clk);
+        wait until falling_edge(clk);
+        start <= '0';
 
-
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '0';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= '1';
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-        sda <= 'X'; -- rw
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
-
-        check_equal(sda_enable, '1');   -- ack
-        trigger_scl_pulse := '1';
-        check_equal(success, '0');
-        check_equal(fail, '0');
-        wait until rising_edge(triggered_scl_pulse);
+        i2c_bus_pkg.wait_until_idle(net, bus_actor);
 
         check_equal(success, '1');
         check_equal(fail, '0');
@@ -468,5 +217,5 @@ begin  -- architecture tb
     test_runner_cleanup(runner);
   end process main;
 
-  stability_check: check_stable(clk, one, scl_rising, scl_falling, sda_enable);
+  test_runner_watchdog(runner, 10 ms);
 end architecture tb;
