@@ -7,9 +7,14 @@
       url = "github:nix-community/poetry2nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nix-fpga = {
+      url = "github:Rutherther/nix-fpga";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, poetry2nix, nixpkgs }:
+  outputs = { self, poetry2nix, nixpkgs, nix-fpga }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs {
@@ -51,7 +56,8 @@
         meta.mainProgram = "nvc";
         paths = [
           pkgs.ghdl
-          # pkgs.nvc
+          pkgs.nvc
+          nix-fpga.packages.${system}.questa
         ];
       };
     in {
@@ -121,7 +127,7 @@
             python-env
           ];
 
-          VUNIT_SIMULATOR = "nvc";
+          VUNIT_SIMULATOR = "modelsim";
         };
       };
     };
